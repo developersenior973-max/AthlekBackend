@@ -205,6 +205,7 @@ export const getPublicProduct = async (req, res) => {
         `${baseUrl}${product.images[0]}` : "/placeholder.svg?height=400&width=300",
       images: product.images ? product.images.map(img => `${baseUrl}${img}`) : [],
       highlightImage: product.highlightImage ? `${baseUrl}${product.highlightImage}` : undefined,
+      isProductHighlight: product.isProductHighlight || false,
       category: product.category,
       subCategory: product.subCategory,
       description: product.description,

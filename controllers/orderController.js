@@ -223,7 +223,7 @@ const sendOrderStatusUpdateEmail = async (order, oldStatus, newStatus) => {
 // Create new order
 export const createOrder = async (req, res) => {
   try {
-    const { customer, items, notes } = req.body;
+    const { customer, items, notes, subtotal: frontendSubtotal, shippingCost: frontendShippingCost, discountAmount: frontendDiscountAmount, total: frontendTotal, currency } = req.body;
 
     // Validate required fields
     if (!customer || !items || items.length === 0) {
@@ -329,14 +329,38 @@ export const createOrder = async (req, res) => {
       }
     }
 
-    // Calculate bundle discount
-    const bundleDiscountInfo = await calculateBundleDiscount(items);
-    const bundleDiscount = bundleDiscountInfo.discountAmount;
-
-    // Calculate shipping
-    const shippingInfo = await calculateShipping(subtotal - bundleDiscount);
-    const shippingCost = shippingInfo.shippingCost;
-    const total = subtotal - bundleDiscount + shippingCost;
+    // Use frontend calculated values if provided, otherwise calculate on backend
+    let finalSubtotal, finalShippingCost, finalDiscountAmount, finalTotal;
+    
+    if (frontendTotal && frontendSubtotal !== undefined) {
+      // Use frontend calculated values
+      finalSubtotal = frontendSubtotal;
+      finalShippingCost = frontendShippingCost || 0;
+      finalDiscountAmount = frontendDiscountAmount || 0;
+      finalTotal = frontendTotal;
+      
+      console.log("Using frontend calculated values:");
+      console.log("Frontend Subtotal:", finalSubtotal);
+      console.log("Frontend Shipping:", finalShippingCost);
+      console.log("Frontend Discount:", finalDiscountAmount);
+      console.log("Frontend Total:", finalTotal);
+    } else {
+      // Fallback to backend calculation
+      const bundleDiscountInfo = await calculateBundleDiscount(items);
+      const bundleDiscount = bundleDiscountInfo.discountAmount;
+      
+      const shippingInfo = await calculateShipping(subtotal - bundleDiscount);
+      finalSubtotal = subtotal;
+      finalShippingCost = shippingInfo.shippingCost;
+      finalDiscountAmount = bundleDiscount;
+      finalTotal = subtotal - bundleDiscount + finalShippingCost;
+      
+      console.log("Using backend calculated values:");
+      console.log("Backend Subtotal:", finalSubtotal);
+      console.log("Backend Shipping:", finalShippingCost);
+      console.log("Backend Discount:", finalDiscountAmount);
+      console.log("Backend Total:", finalTotal);
+    }
 
     // Generate order number
     const orderCount = await Order.countDocuments();
@@ -350,13 +374,13 @@ export const createOrder = async (req, res) => {
       orderNumber,
       customer,
       items: orderItems,
-      subtotal,
-      bundleDiscount,
-      appliedBundle: bundleDiscountInfo.bundle ? bundleDiscountInfo.bundle._id : null,
-      shippingCost,
-      total,
+      subtotal: finalSubtotal,
+      bundleDiscount: finalDiscountAmount,
+      appliedBundle: null, // Will be set if bundle discount was applied
+      shippingCost: finalShippingCost,
+      total: finalTotal,
       notes,
-      isFreeShipping: shippingCost === 0,
+      isFreeShipping: finalShippingCost === 0,
       status: "pending", // Order created but payment not completed
       paymentStatus: "pending", // Payment not initiated yet
       paymentGateway: "ngenius", // Set payment gateway
@@ -375,7 +399,7 @@ export const createOrder = async (req, res) => {
       message: "Order created successfully",
       data: order,
       emailSent: false, // No email sent yet - waiting for payment success
-      bundleDiscount: bundleDiscountInfo
+      bundleDiscount: { discountAmount: finalDiscountAmount }
     });
   } catch (error) {
     console.error("Error creating order:", error);

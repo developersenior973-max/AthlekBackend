@@ -260,7 +260,17 @@ export const getPaymentStatus = async (req, res) => {
         console.log('🔍 Using paymentGatewayOrderId:', order.paymentGatewayOrderId);
         const paymentStatus = await ngeniusService.getPaymentStatus(order.paymentGatewayOrderId);
         
-        if (paymentStatus.state === 'CAPTURED') {
+        console.log('🔍 Full payment status response:', JSON.stringify(paymentStatus, null, 2));
+        
+        // Check if payment is captured - N-Genius response structure
+        const isCaptured = paymentStatus._embedded && 
+                          paymentStatus._embedded.payment && 
+                          paymentStatus._embedded.payment.length > 0 &&
+                          paymentStatus._embedded.payment[0].state === 'CAPTURED';
+        
+        console.log('🔍 Is payment captured?', isCaptured);
+        
+        if (isCaptured) {
           // Update order status
           order.paymentStatus = 'paid';
           order.paymentGatewayStatus = 'captured';
@@ -274,9 +284,13 @@ export const getPaymentStatus = async (req, res) => {
           } catch (emailError) {
             console.error('❌ Email sending failed after payment confirmation via status check:', emailError);
           }
-        } else if (paymentStatus.state === 'FAILED' || paymentStatus.state === 'CANCELLED') {
+        } else if (paymentStatus._embedded && 
+                   paymentStatus._embedded.payment && 
+                   paymentStatus._embedded.payment.length > 0 &&
+                   (paymentStatus._embedded.payment[0].state === 'FAILED' || 
+                    paymentStatus._embedded.payment[0].state === 'CANCELLED')) {
           order.paymentStatus = 'failed';
-          order.paymentGatewayStatus = paymentStatus.state.toLowerCase();
+          order.paymentGatewayStatus = paymentStatus._embedded.payment[0].state.toLowerCase();
           await order.save();
         }
       } catch (statusError) {

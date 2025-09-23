@@ -220,7 +220,7 @@ export const sendOrderConfirmationEmail = async (order) => {
     const mailOptions = {
       from: process.env.EMAIL_FROM || "marketing@athlekt.com",
       to: order.customer.email,
-      subject: subject,
+      subject: `Order Confirmation - ${order.orderNumber}`,
       html: htmlContent
     };
 

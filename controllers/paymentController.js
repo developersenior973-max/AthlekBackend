@@ -248,6 +248,36 @@ export const getPaymentStatus = async (req, res) => {
       });
     }
 
+    // If payment is pending, check with N-Genius and send email if successful
+    if (order.paymentStatus === 'pending' && order.paymentGatewayOrderId) {
+      try {
+        console.log('🔍 Checking payment status with N-Genius for order:', order.orderNumber);
+        const paymentStatus = await ngeniusService.getPaymentStatus(order.paymentGatewayOrderId);
+        
+        if (paymentStatus.state === 'CAPTURED') {
+          // Update order status
+          order.paymentStatus = 'paid';
+          order.paymentGatewayStatus = 'captured';
+          order.status = 'processing';
+          await order.save();
+
+          // Send confirmation email
+          try {
+            await sendOrderConfirmationEmail(order);
+            console.log('✅ Payment confirmed via status check, order confirmation email sent:', order.orderNumber);
+          } catch (emailError) {
+            console.error('❌ Email sending failed after payment confirmation via status check:', emailError);
+          }
+        } else if (paymentStatus.state === 'FAILED' || paymentStatus.state === 'CANCELLED') {
+          order.paymentStatus = 'failed';
+          order.paymentGatewayStatus = paymentStatus.state.toLowerCase();
+          await order.save();
+        }
+      } catch (statusError) {
+        console.error('Error checking payment status with N-Genius:', statusError);
+      }
+    }
+
     res.json({
       success: true,
       data: {
@@ -265,6 +295,50 @@ export const getPaymentStatus = async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Failed to get payment status",
+      error: error.message
+    });
+  }
+};
+
+// Manual email sending for testing (admin only)
+export const sendTestEmail = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    
+    const order = await Order.findById(orderId);
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: "Order not found"
+      });
+    }
+
+    try {
+      await sendOrderConfirmationEmail(order);
+      console.log('✅ Test email sent successfully for order:', order.orderNumber);
+      
+      res.json({
+        success: true,
+        message: "Test email sent successfully",
+        data: {
+          orderNumber: order.orderNumber,
+          email: order.customer.email
+        }
+      });
+    } catch (emailError) {
+      console.error('❌ Test email sending failed:', emailError);
+      res.status(500).json({
+        success: false,
+        message: "Failed to send test email",
+        error: emailError.message
+      });
+    }
+
+  } catch (error) {
+    console.error('Error sending test email:', error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to send test email",
       error: error.message
     });
   }

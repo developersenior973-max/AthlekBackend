@@ -250,9 +250,14 @@ export const getPaymentStatus = async (req, res) => {
     }
 
     // If payment is pending, check with N-Genius and send email if successful
+    console.log('🔍 getPaymentStatus called for order:', order.orderNumber);
+    console.log('🔍 Order paymentStatus:', order.paymentStatus);
+    console.log('🔍 Order paymentGatewayOrderId:', order.paymentGatewayOrderId);
+    
     if (order.paymentStatus === 'pending' && order.paymentGatewayOrderId) {
       try {
         console.log('🔍 Checking payment status with N-Genius for order:', order.orderNumber);
+        console.log('🔍 Using paymentGatewayOrderId:', order.paymentGatewayOrderId);
         const paymentStatus = await ngeniusService.getPaymentStatus(order.paymentGatewayOrderId);
         
         if (paymentStatus.state === 'CAPTURED') {
@@ -277,6 +282,10 @@ export const getPaymentStatus = async (req, res) => {
       } catch (statusError) {
         console.error('Error checking payment status with N-Genius:', statusError);
       }
+    } else {
+      console.log('🔍 Not checking with N-Genius because:');
+      console.log('🔍 - paymentStatus is pending:', order.paymentStatus === 'pending');
+      console.log('🔍 - paymentGatewayOrderId exists:', !!order.paymentGatewayOrderId);
     }
 
     res.json({

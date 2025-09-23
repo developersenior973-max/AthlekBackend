@@ -26,6 +26,7 @@ export const createNGeniusPayment = async (req, res) => {
 
     // Create payment order with N-Genius
     const paymentData = {
+      orderId: order._id,
       orderNumber: order.orderNumber,
       total: order.total,
       currency: "AED",

@@ -102,8 +102,8 @@ class NGeniusService {
           postCode: orderData.customer.address.zipCode,
           countryCode: "AE"
         },
-        returnUrl: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/payment-success`,
-        cancelUrl: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/payment-cancelled`,
+        returnUrl: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/payment-success?orderId=${orderData.orderId}`,
+        cancelUrl: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/payment-cancelled?orderId=${orderData.orderId}`,
         language: "en"
       };
 

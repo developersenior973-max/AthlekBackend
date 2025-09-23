@@ -262,15 +262,17 @@ export const getPaymentStatus = async (req, res) => {
         
         console.log('🔍 Full payment status response:', JSON.stringify(paymentStatus, null, 2));
         
-        // Check if payment is captured - N-Genius response structure
-        const isCaptured = paymentStatus._embedded && 
-                          paymentStatus._embedded.payment && 
-                          paymentStatus._embedded.payment.length > 0 &&
-                          paymentStatus._embedded.payment[0].state === 'CAPTURED';
+        // Check if payment is successful - N-Genius response structure
+        const isSuccessful = paymentStatus._embedded && 
+                            paymentStatus._embedded.payment && 
+                            paymentStatus._embedded.payment.length > 0 &&
+                            (paymentStatus._embedded.payment[0].state === 'CAPTURED' || 
+                             paymentStatus._embedded.payment[0].state === 'PURCHASED');
         
-        console.log('🔍 Is payment captured?', isCaptured);
+        console.log('🔍 Payment state:', paymentStatus._embedded?.payment?.[0]?.state);
+        console.log('🔍 Is payment successful?', isSuccessful);
         
-        if (isCaptured) {
+        if (isSuccessful) {
           // Update order status
           order.paymentStatus = 'paid';
           order.paymentGatewayStatus = 'captured';

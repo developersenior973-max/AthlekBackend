@@ -102,8 +102,8 @@ class NGeniusService {
           postCode: orderData.customer.address.zipCode,
           countryCode: "AE"
         },
-        returnUrl: `http://34.18.0.53/payment-success?orderId=${orderData.orderId}`,
-        cancelUrl: `http://34.18.0.53/payment-cancelled?orderId=${orderData.orderId}`,
+        returnUrl: `https://athlekt.com/payment-success?orderId=${orderData.orderId}`,
+        cancelUrl: `https://athlekt.com/payment-cancelled?orderId=${orderData.orderId}`,
         language: "en"
       };
 

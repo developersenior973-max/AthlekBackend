@@ -241,13 +241,27 @@ export const getPaymentStatus = async (req, res) => {
   try {
     const { orderId } = req.params;
     
-    const order = await Order.findById(orderId);
+    console.log('🔍 getPaymentStatus called with orderId:', orderId);
+    console.log('🔍 orderId type:', typeof orderId);
+    console.log('🔍 orderId length:', orderId?.length);
+    
+    let order = await Order.findById(orderId);
+    
+    // If not found by ObjectId, try to find by N-Genius order ID
     if (!order) {
+      console.log('🔍 Order not found by ObjectId, trying to find by paymentGatewayOrderId');
+      order = await Order.findOne({ paymentGatewayOrderId: orderId });
+    }
+    
+    if (!order) {
+      console.log('🔍 Order not found by either ObjectId or paymentGatewayOrderId');
       return res.status(404).json({
         success: false,
         message: "Order not found"
       });
     }
+    
+    console.log('🔍 Order found:', order.orderNumber);
 
     // If payment is pending, check with N-Genius and send email if successful
     console.log('🔍 getPaymentStatus called for order:', order.orderNumber);

@@ -41,6 +41,10 @@ const upload = multer({
   }
 });
 
+// Public product routes (no authentication required) - MUST come before /:id routes
+router.get('/public/all', getPublicProducts);
+router.get('/public/:id', getPublicProduct);
+
 // Admin product routes (require authentication)
 router.get('/', getProducts);
 router.get('/stats', getProductStats);
@@ -48,10 +52,6 @@ router.get('/:id', getProduct);
 router.post('/', createProduct);
 router.put('/:id', updateProduct);
 router.delete('/:id', deleteProduct);
-
-// Public product routes (no authentication required)
-router.get('/public/all', getPublicProducts);
-router.get('/public/:id', getPublicProduct);
 
 // Image upload route
 router.post('/upload-images', upload.array('images', 10), uploadProductImages);

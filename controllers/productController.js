@@ -142,6 +142,14 @@ export const getProduct = async (req, res) => {
   try {
     const { id } = req.params;
     
+    // Validate ObjectId format
+    if (!id.match(/^[0-9a-fA-F]{24}$/)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid product ID format'
+      });
+    }
+    
     const product = await Product.findById(id);
     
     if (!product) {
@@ -177,6 +185,14 @@ export const getProduct = async (req, res) => {
 export const getPublicProduct = async (req, res) => {
   try {
     const { id } = req.params;
+    
+    // Validate ObjectId format
+    if (!id.match(/^[0-9a-fA-F]{24}$/)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid product ID format'
+      });
+    }
     
     const product = await Product.findById(id);
     
@@ -220,7 +236,8 @@ export const getPublicProduct = async (req, res) => {
       colors: product.colorOptions.map(color => ({
         name: color.name,
         hex: color.type === 'hex' ? color.value : undefined,
-        image: color.type === 'image' ? color.value : undefined
+        image: color.type === 'image' ? color.value : undefined,
+        images: color.images ? color.images.map(img => `${baseUrl}${img}`) : []
       })),
       sizes: product.sizeOptions,
       variants: product.variants,

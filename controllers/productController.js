@@ -114,7 +114,8 @@ export const getPublicProducts = async (req, res) => {
         colors: product.colorOptions.map(color => ({
           name: color.name,
           hex: color.type === 'hex' ? color.value : undefined,
-          image: color.type === 'image' ? color.value : undefined
+          image: color.type === 'image' ? color.value : undefined,
+          images: color.images ? color.images.map(img => `${baseUrl}${img}`) : []
         })),
         sizes: product.sizeOptions,
         variants: product.variants,

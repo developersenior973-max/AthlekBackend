@@ -14,7 +14,12 @@ const colorOptionSchema = new mongoose.Schema({
   value: {
     type: String,
     required: true
-  }
+  },
+  // Add images array for color-specific images
+  images: [{
+    type: String,
+    trim: true
+  }]
 });
 
 const productVariantSchema = new mongoose.Schema({

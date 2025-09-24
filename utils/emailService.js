@@ -51,13 +51,13 @@ export const sendFormSubmissionEmail = async (formData) => {
           </p>
           
           <div style="text-align: center; margin: 30px 0;">
-            <a href="#" style="background-color: #cbf26c; color: #2a2a2a; padding: 15px 30px; text-decoration: none; font-weight: bold; border-radius: 5px; display: inline-block;">
+            <a href="https://athlekt.com/collection" style="background-color: #cbf26c; color: #2a2a2a; padding: 15px 30px; text-decoration: none; font-weight: bold; border-radius: 5px; display: inline-block;">
               EXPLORE OUR PRODUCTS
             </a>
           </div>
           
           <p style="color: #999; font-size: 14px; margin-top: 30px; text-align: center;">
-            Thank you for choosing Athlekt! 💪
+            Thank you for choosing Athlekt! 
           </p>
         </div>
         
@@ -272,7 +272,7 @@ export const sendOrderConfirmationEmail = async (order) => {
           
           <!-- Footer Message -->
           <p style="color: #999; font-size: 14px; margin-top: 30px; text-align: center; line-height: 1.6;">
-            Thank you for choosing Athlekt! 💪<br>
+            Thank you for choosing Athlekt! <br>
             Keep this receipt for your records. If you have any questions, please contact our customer support.
           </p>
         </div>

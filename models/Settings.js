@@ -4,6 +4,39 @@ const settingsSchema = new mongoose.Schema({
   currency: { 
     type: String, 
     default: "USD" 
+  },
+  homepageImage1: {
+    type: String,
+    default: ""
+  },
+  homepageImage1Type: {
+    type: String,
+    enum: ['image', 'video'],
+    default: 'image'
+  },
+  homepageImage2: {
+    type: String,
+    default: ""
+  },
+  homepageImage3: {
+    type: String,
+    default: ""
+  },
+  homepageImage4: {
+    type: String,
+    default: ""
+  },
+  homepageImage5: {
+    type: String,
+    default: ""
+  },
+  homepageImage6: {
+    type: String,
+    default: ""
+  },
+  homepageImage7: {
+    type: String,
+    default: ""
   }
 }, {
   timestamps: true

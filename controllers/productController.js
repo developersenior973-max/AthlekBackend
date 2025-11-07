@@ -1,4 +1,5 @@
 import Product from "../models/Product.js";
+import Review from "../models/Review.js";
 
 // Get all products with search and filtering
 export const getProducts = async (req, res) => {
@@ -32,15 +33,50 @@ export const getProducts = async (req, res) => {
     }
     
     const products = await Product.find(query).sort({ createdAt: -1 });
-    
+
+    const productIds = products.map(product => product._id);
+    let reviewStatsMap = {};
+
+    if (productIds.length > 0) {
+      const reviewStats = await Review.aggregate([
+        {
+          $match: {
+            product: { $in: productIds },
+            status: "approved"
+          }
+        },
+        {
+          $group: {
+            _id: "$product",
+            averageRating: { $avg: "$rating" },
+            reviewCount: { $sum: 1 }
+          }
+        }
+      ]);
+
+      reviewStatsMap = reviewStats.reduce((acc, stat) => {
+        acc[stat._id.toString()] = {
+          average: stat.averageRating || 0,
+          count: stat.reviewCount || 0
+        };
+        return acc;
+      }, {});
+    }
+
     // Get the base URL for images
     const baseUrl = `${req.protocol}://${req.get('host')}`;
-    
+
     // Transform products to include full image URLs
     const transformedProducts = products.map(product => {
+      const stats = reviewStatsMap[product._id.toString()];
+      const reviewCount = stats?.count ?? product.reviewCount ?? 0;
+      const averageRating = stats?.average ?? (reviewCount > 0 ? product.reviewRating : 0) ?? 0;
+
       const productObj = product.toObject();
       productObj.images = product.images ? product.images.map(img => `${baseUrl}${img}`) : [];
       productObj.highlightImage = product.highlightImage ? `${baseUrl}${product.highlightImage}` : undefined;
+      productObj.reviewRating = Number(averageRating.toFixed(1));
+      productObj.reviewCount = reviewCount;
       return productObj;
     });
     
@@ -84,12 +120,45 @@ export const getPublicProducts = async (req, res) => {
     }
     
     const products = await Product.find(query).sort({ createdAt: -1 });
-    
+
+    const productIds = products.map(product => product._id);
+    let reviewStatsMap = {};
+
+    if (productIds.length > 0) {
+      const reviewStats = await Review.aggregate([
+        {
+          $match: {
+            product: { $in: productIds },
+            status: "approved"
+          }
+        },
+        {
+          $group: {
+            _id: "$product",
+            averageRating: { $avg: "$rating" },
+            reviewCount: { $sum: 1 }
+          }
+        }
+      ]);
+
+      reviewStatsMap = reviewStats.reduce((acc, stat) => {
+        acc[stat._id.toString()] = {
+          average: stat.averageRating || 0,
+          count: stat.reviewCount || 0
+        };
+        return acc;
+      }, {});
+    }
+
     // Get the base URL for images
     const baseUrl = `${req.protocol}://${req.get('host')}`;
     
     // Transform products for frontend compatibility
     const transformedProducts = products.map(product => {
+      const stats = reviewStatsMap[product._id.toString()];
+      const reviewCount = stats?.count ?? product.reviewCount ?? 0;
+      const averageRating = stats?.average ?? (reviewCount > 0 ? product.reviewRating : 0) ?? 0;
+
       // Calculate discounted price
       const originalPrice = product.basePrice;
       const discountAmount = (originalPrice * product.discountPercentage) / 100;
@@ -119,7 +188,9 @@ export const getPublicProducts = async (req, res) => {
         })),
         sizes: product.sizeOptions,
         variants: product.variants,
-        defaultVariant: product.defaultVariant
+        defaultVariant: product.defaultVariant,
+        rating: Number(averageRating.toFixed(1)),
+        reviewCount
       };
     });
     
@@ -210,6 +281,26 @@ export const getPublicProduct = async (req, res) => {
     const originalPrice = product.basePrice;
     const discountAmount = (originalPrice * product.discountPercentage) / 100;
     const discountedPrice = originalPrice - discountAmount;
+
+    const reviewStats = await Review.aggregate([
+      {
+        $match: {
+          product: product._id,
+          status: "approved"
+        }
+      },
+      {
+        $group: {
+          _id: "$product",
+          averageRating: { $avg: "$rating" },
+          reviewCount: { $sum: 1 }
+        }
+      }
+    ]);
+
+    const stats = reviewStats[0];
+    const reviewCount = stats?.reviewCount ?? product.reviewCount ?? 0;
+    const averageRating = stats?.averageRating ?? (reviewCount > 0 ? product.reviewRating : 0) ?? 0;
     
     // Transform product for frontend compatibility
     const transformedProduct = {
@@ -242,8 +333,8 @@ export const getPublicProduct = async (req, res) => {
       sizes: product.sizeOptions,
       variants: product.variants,
       defaultVariant: product.defaultVariant,
-      rating: product.reviewRating || 4.8,
-      reviewCount: 0 // Default review count for now
+      rating: Number(averageRating.toFixed(1)),
+      reviewCount
     };
     
     res.status(200).json({

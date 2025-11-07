@@ -70,7 +70,6 @@ const productVariantSchema = new mongoose.Schema({
     default: true
   }
 });
-
 const productSchema = new mongoose.Schema({
   title: {
     type: String,
@@ -132,9 +131,14 @@ const productSchema = new mongoose.Schema({
   },
   reviewRating: {
     type: Number,
-    min: 1,
+    min: 0,
     max: 5,
-    default: 5
+    default: 0
+  },
+  reviewCount: {
+    type: Number,
+    min: 0,
+    default: 0
   },
   images: [{
     type: String,
@@ -168,7 +172,6 @@ productSchema.index({ title: 'text', baseSku: 'text', category: 'text' });
 productSchema.pre('save', function(next) {
   if (this.sizeOptions.length > 0 && this.colorOptions.length > 0 && this.variants.length === 0) {
     this.variants = [];
-    
     this.sizeOptions.forEach(size => {
       this.colorOptions.forEach(color => {
         const variantId = `variant-${size}-${color.name}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -196,4 +199,4 @@ productSchema.pre('save', function(next) {
 
 const Product = mongoose.model('Product', productSchema);
 
-export default Product; 
+export default Product;

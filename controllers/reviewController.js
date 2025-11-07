@@ -1,5 +1,31 @@
+import mongoose from "mongoose";
 import Review from "../models/Review.js";
 import Product from "../models/Product.js";
+
+const updateProductReviewStats = async (productId) => {
+  const stats = await Review.aggregate([
+    {
+      $match: {
+        product: new mongoose.Types.ObjectId(productId),
+        status: "approved",
+      },
+    },
+    {
+      $group: {
+        _id: "$product",
+        averageRating: { $avg: "$rating" },
+        reviewCount: { $sum: 1 },
+      },
+    },
+  ]);
+
+  const stat = stats[0];
+
+  await Product.findByIdAndUpdate(productId, {
+    reviewRating: stat?.averageRating ?? 0,
+    reviewCount: stat?.reviewCount ?? 0,
+  });
+};
 
 // Get all reviews (admin dashboard)
 export const getReviews = async (req, res) => {
@@ -86,6 +112,8 @@ export const approveReview = async (req, res) => {
       return res.status(404).json({ message: "Review not found" });
     }
     
+    await updateProductReviewStats(review.product._id || review.product);
+
     res.json({
       message: "Review approved successfully",
       review
@@ -115,6 +143,8 @@ export const rejectReview = async (req, res) => {
       return res.status(404).json({ message: "Review not found" });
     }
     
+    await updateProductReviewStats(review.product._id || review.product);
+
     res.json({
       message: "Review rejected successfully",
       review
@@ -136,6 +166,8 @@ export const updateReview = async (req, res) => {
     if (!review) {
       return res.status(404).json({ message: "Review not found" });
     }
+
+    await updateProductReviewStats(review.product._id || review.product);
 
     res.json({
       message: "Review updated successfully",

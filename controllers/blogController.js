@@ -12,7 +12,32 @@ const formatBlog = (blog, req) => {
   } else {
     blogObj.coverImage = "";
   }
+  if (blogObj.url) {
+    const normalized = normalizeBlogUrl(blogObj.url);
+    if (normalized) {
+      blogObj.url = normalized;
+    }
+  }
   return blogObj;
+};
+
+const normalizeBlogUrl = (value = "") => {
+  const trimmed = value.trim().toLowerCase();
+  if (!trimmed) return "";
+
+  const withoutDomain = trimmed.replace(/^https?:\/\/[^/]+/i, "");
+  let slug = withoutDomain.replace(/^\/+/, "");
+
+  if (slug.startsWith("blog/")) {
+    slug = slug.slice(5);
+  }
+
+  slug = slug
+    .replace(/['"]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+
+  return slug;
 };
 
 // Get all blogs
@@ -52,9 +77,20 @@ export const getPublicBlogByUrl = async (req, res) => {
       return res.status(400).json({ success: false, error: "Blog slug is required" });
     }
 
-    const normalizedSlug = decodeURIComponent(slug).trim();
+    const decodedSlug = decodeURIComponent(slug || "").trim();
+    const normalizedSlug = normalizeBlogUrl(decodedSlug);
 
-    let blog = await Blog.findOne({ url: normalizedSlug, isActive: true });
+    const candidates = [];
+    if (normalizedSlug) {
+      candidates.push(normalizedSlug);
+      candidates.push(`/blog/${normalizedSlug}`);
+      candidates.push(`blog/${normalizedSlug}`);
+    }
+    if (decodedSlug) {
+      candidates.push(decodedSlug);
+    }
+
+    let blog = await Blog.findOne({ url: { $in: candidates }, isActive: true });
 
     if (!blog && mongoose.Types.ObjectId.isValid(normalizedSlug)) {
       blog = await Blog.findOne({ _id: normalizedSlug, isActive: true });
@@ -90,9 +126,17 @@ export const getBlogById = async (req, res) => {
 export const createBlog = async (req, res) => {
   try {
     const { adminName, url, content, isActive, coverImage } = req.body;
+    const normalizedUrl = normalizeBlogUrl(url || "");
+    
+    if (!normalizedUrl) {
+      return res.status(400).json({
+        error: "A valid blog URL (slug) is required"
+      });
+    }
     
     // Check if URL already exists
-    const existingBlog = await Blog.findOne({ url });
+    const urlCandidates = [normalizedUrl, `/blog/${normalizedUrl}`, `blog/${normalizedUrl}`];
+    const existingBlog = await Blog.findOne({ url: { $in: urlCandidates } });
     if (existingBlog) {
       return res.status(400).json({ 
         error: "A blog with this URL already exists" 
@@ -101,7 +145,7 @@ export const createBlog = async (req, res) => {
     
     const blog = new Blog({
       adminName,
-      url,
+      url: normalizedUrl,
       content,
       coverImage: coverImage || "",
       isActive: isActive !== undefined ? isActive : true
@@ -125,9 +169,17 @@ export const updateBlog = async (req, res) => {
     const updateData = req.body;
     
     // If URL is being updated, check for duplicates
-    if (updateData.url) {
+    if (Object.prototype.hasOwnProperty.call(updateData, "url")) {
+      const normalizedUrl = normalizeBlogUrl(updateData.url || "");
+      if (!normalizedUrl) {
+        return res.status(400).json({
+          error: "A valid blog URL (slug) is required"
+        });
+      }
+
+      const urlCandidates = [normalizedUrl, `/blog/${normalizedUrl}`, `blog/${normalizedUrl}`];
       const existingBlog = await Blog.findOne({ 
-        url: updateData.url,
+        url: { $in: urlCandidates },
         _id: { $ne: id }
       });
       if (existingBlog) {
@@ -135,6 +187,7 @@ export const updateBlog = async (req, res) => {
           error: "A blog with this URL already exists" 
         });
       }
+      updateData.url = normalizedUrl;
     }
     
     if (Object.prototype.hasOwnProperty.call(updateData, 'coverImage')) {

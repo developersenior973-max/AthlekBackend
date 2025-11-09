@@ -46,6 +46,38 @@ const settingsSchema = new mongoose.Schema({
     type: String,
     default: ""
   },
+  discoverYourFitMen: {
+    type: String,
+    default: ""
+  },
+  discoverYourFitWomen: {
+    type: String,
+    default: ""
+  },
+  discoverYourFitNewArrivals: {
+    type: String,
+    default: ""
+  },
+  discoverYourFitSets: {
+    type: String,
+    default: ""
+  },
+  categoriesMenBackground: {
+    type: String,
+    default: ""
+  },
+  categoriesMenForeground: {
+    type: String,
+    default: ""
+  },
+  categoriesWomenBackground: {
+    type: String,
+    default: ""
+  },
+  categoriesWomenForeground: {
+    type: String,
+    default: ""
+  },
   communityHighlight1: { type: String, default: "" },
   communityHighlight2: { type: String, default: "" },
   communityHighlight3: { type: String, default: "" },

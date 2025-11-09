@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import Blog from "../models/Blog.js";
 
 const formatBlog = (blog, req) => {
@@ -40,6 +41,32 @@ export const getActiveBlogs = async (req, res) => {
       success: false,
       error: error.message 
     });
+  }
+};
+
+// Get single blog by URL (public)
+export const getPublicBlogByUrl = async (req, res) => {
+  try {
+    const { slug } = req.params;
+    if (!slug) {
+      return res.status(400).json({ success: false, error: "Blog slug is required" });
+    }
+
+    const normalizedSlug = decodeURIComponent(slug).trim();
+
+    let blog = await Blog.findOne({ url: normalizedSlug, isActive: true });
+
+    if (!blog && mongoose.Types.ObjectId.isValid(normalizedSlug)) {
+      blog = await Blog.findOne({ _id: normalizedSlug, isActive: true });
+    }
+
+    if (!blog) {
+      return res.status(404).json({ success: false, error: "Blog not found" });
+    }
+
+    res.json({ success: true, data: formatBlog(blog, req) });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
   }
 };
 

@@ -4,6 +4,7 @@ import {
   getBlogs,
   getActiveBlogs,
   getBlogById,
+  getPublicBlogByUrl,
   createBlog,
   updateBlog,
   deleteBlog,
@@ -14,6 +15,7 @@ const router = express.Router();
 
 // Public routes (no authentication required)
 router.get('/public/active', getActiveBlogs);
+router.get('/public/by-url/:slug', getPublicBlogByUrl);
 
 // Admin routes (require authentication)
 router.get('/', authenticateToken, requireRole(["admin", "manager"]), getBlogs);

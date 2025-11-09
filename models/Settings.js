@@ -37,7 +37,24 @@ const settingsSchema = new mongoose.Schema({
   homepageImage7: {
     type: String,
     default: ""
-  }
+  },
+  salesImage1: {
+    type: String,
+    default: ""
+  },
+  salesImage2: {
+    type: String,
+    default: ""
+  },
+  communityHighlight1: { type: String, default: "" },
+  communityHighlight2: { type: String, default: "" },
+  communityHighlight3: { type: String, default: "" },
+  communityHighlight4: { type: String, default: "" },
+  communityHighlight5: { type: String, default: "" },
+  communityHighlight6: { type: String, default: "" },
+  communityHighlight7: { type: String, default: "" },
+  communityHighlight8: { type: String, default: "" },
+  communityHighlight9: { type: String, default: "" }
 }, {
   timestamps: true
 });

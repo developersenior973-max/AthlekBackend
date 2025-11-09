@@ -75,6 +75,7 @@ export const getProducts = async (req, res) => {
       const productObj = product.toObject();
       productObj.images = product.images ? product.images.map(img => `${baseUrl}${img}`) : [];
       productObj.highlightImage = product.highlightImage ? `${baseUrl}${product.highlightImage}` : undefined;
+      productObj.sizeGuideImage = product.sizeGuideImage ? `${baseUrl}${product.sizeGuideImage}` : "";
       productObj.reviewRating = Number(averageRating.toFixed(1));
       productObj.reviewCount = reviewCount;
       return productObj;
@@ -174,6 +175,7 @@ export const getPublicProducts = async (req, res) => {
           `${baseUrl}${product.images[0]}` : "/placeholder.svg?height=400&width=300",
         images: product.images ? product.images.map(img => `${baseUrl}${img}`) : [],
         highlightImage: product.highlightImage ? `${baseUrl}${product.highlightImage}` : undefined,
+        sizeGuideImage: product.sizeGuideImage ? `${baseUrl}${product.sizeGuideImage}` : "",
         category: product.category,
         subCategory: product.subCategory,
         collectionType: product.collectionType,
@@ -237,6 +239,7 @@ export const getProduct = async (req, res) => {
     const productObj = product.toObject();
     productObj.images = product.images ? product.images.map(img => `${baseUrl}${img}`) : [];
     productObj.highlightImage = product.highlightImage ? `${baseUrl}${product.highlightImage}` : undefined;
+    productObj.sizeGuideImage = product.sizeGuideImage ? `${baseUrl}${product.sizeGuideImage}` : "";
     
     res.status(200).json({
       success: true,
@@ -313,6 +316,7 @@ export const getPublicProduct = async (req, res) => {
         `${baseUrl}${product.images[0]}` : "/placeholder.svg?height=400&width=300",
       images: product.images ? product.images.map(img => `${baseUrl}${img}`) : [],
       highlightImage: product.highlightImage ? `${baseUrl}${product.highlightImage}` : undefined,
+      sizeGuideImage: product.sizeGuideImage ? `${baseUrl}${product.sizeGuideImage}` : "",
       isProductHighlight: product.isProductHighlight || false,
       category: product.category,
       subCategory: product.subCategory,
@@ -373,7 +377,8 @@ export const createProduct = async (req, res) => {
       variants,
       defaultVariant,
       images,
-      highlightImage
+      highlightImage,
+      sizeGuideImage
     } = req.body;
 
     // Validate required fields
@@ -435,16 +440,23 @@ export const createProduct = async (req, res) => {
       variants: variants || [],
       defaultVariant,
       images,
-      highlightImage: highlightImage || ""
+      highlightImage: highlightImage || "",
+      sizeGuideImage: sizeGuideImage || ""
     };
 
     const product = new Product(productData);
     await product.save();
 
+    const baseUrl = `${req.protocol}://${req.get('host')}`;
+    const productObj = product.toObject();
+    productObj.images = product.images ? product.images.map(img => `${baseUrl}${img}`) : [];
+    productObj.highlightImage = product.highlightImage ? `${baseUrl}${product.highlightImage}` : undefined;
+    productObj.sizeGuideImage = product.sizeGuideImage ? `${baseUrl}${product.sizeGuideImage}` : "";
+
     res.status(201).json({
       success: true,
       message: 'Product created successfully',
-      data: product
+      data: productObj
     });
   } catch (error) {
     console.error('Error creating product:', error);
@@ -471,6 +483,12 @@ export const updateProduct = async (req, res) => {
   try {
     const { id } = req.params;
     const updateData = req.body;
+
+    if (updateData && Object.prototype.hasOwnProperty.call(updateData, 'sizeGuideImage')) {
+      if (updateData.sizeGuideImage === null) {
+        updateData.sizeGuideImage = "";
+      }
+    }
 
     // Check if product exists
     const existingProduct = await Product.findById(id);
@@ -517,6 +535,7 @@ export const updateProduct = async (req, res) => {
     const productObj = updatedProduct.toObject();
     productObj.images = updatedProduct.images ? updatedProduct.images.map(img => `${baseUrl}${img}`) : [];
     productObj.highlightImage = updatedProduct.highlightImage ? `${baseUrl}${updatedProduct.highlightImage}` : undefined;
+    productObj.sizeGuideImage = updatedProduct.sizeGuideImage ? `${baseUrl}${updatedProduct.sizeGuideImage}` : "";
 
     res.status(200).json({
       success: true,

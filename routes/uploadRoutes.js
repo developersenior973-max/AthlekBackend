@@ -81,7 +81,10 @@ router.post('/', upload.single('image'), handleUploadError, (req, res) => {
     console.log('📁 Saved as:', req.file.filename);
 
     // Return the image URL
-    const imageUrl = `/uploads/${req.file.filename}`;
+    const baseUrl = `${req.protocol}://${req.get('host')}`;
+    const prefixRaw = process.env.API_BASE_PATH || '';
+    const prefix = prefixRaw ? (prefixRaw.startsWith('/') ? prefixRaw : `/${prefixRaw}`) : '';
+    const imageUrl = `${baseUrl}${prefix}/uploads/${req.file.filename}`;
     
     console.log('🖼️ Image URL:', imageUrl);
     

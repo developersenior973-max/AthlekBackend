@@ -1,11 +1,26 @@
 import Blog from "../models/Blog.js";
 
+const formatBlog = (blog, req) => {
+  if (!blog) return null;
+  const baseUrl = `${req.protocol}://${req.get('host')}`;
+  const blogObj = blog.toObject ? blog.toObject() : { ...blog };
+  if (blogObj.coverImage) {
+    if (!blogObj.coverImage.startsWith('http')) {
+      blogObj.coverImage = `${baseUrl}${blogObj.coverImage.startsWith('/') ? '' : '/'}${blogObj.coverImage}`;
+    }
+  } else {
+    blogObj.coverImage = "";
+  }
+  return blogObj;
+};
+
 // Get all blogs
 export const getBlogs = async (req, res) => {
   try {
     const blogs = await Blog.find().sort({ createdAt: -1 });
     
-    res.json({ data: blogs });
+    const formatted = blogs.map((blog) => formatBlog(blog, req));
+    res.json({ data: formatted });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -18,7 +33,8 @@ export const getActiveBlogs = async (req, res) => {
       .sort({ createdAt: -1 })
       .limit(4); // Limit to 4 for COMMUNITY FAVOURITES section
     
-    res.json({ success: true, data: blogs });
+    const formatted = blogs.map((blog) => formatBlog(blog, req));
+    res.json({ success: true, data: formatted });
   } catch (error) {
     res.status(500).json({ 
       success: false,
@@ -37,7 +53,7 @@ export const getBlogById = async (req, res) => {
       return res.status(404).json({ message: "Blog not found" });
     }
     
-    res.json({ data: blog });
+    res.json({ data: formatBlog(blog, req) });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -46,7 +62,7 @@ export const getBlogById = async (req, res) => {
 // Create new blog
 export const createBlog = async (req, res) => {
   try {
-    const { adminName, url, content, isActive } = req.body;
+    const { adminName, url, content, isActive, coverImage } = req.body;
     
     // Check if URL already exists
     const existingBlog = await Blog.findOne({ url });
@@ -60,6 +76,7 @@ export const createBlog = async (req, res) => {
       adminName,
       url,
       content,
+      coverImage: coverImage || "",
       isActive: isActive !== undefined ? isActive : true
     });
     
@@ -67,7 +84,7 @@ export const createBlog = async (req, res) => {
     
     res.status(201).json({
       message: "Blog created successfully",
-      blog
+      blog: formatBlog(blog, req)
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -93,6 +110,12 @@ export const updateBlog = async (req, res) => {
       }
     }
     
+    if (Object.prototype.hasOwnProperty.call(updateData, 'coverImage')) {
+      if (!updateData.coverImage) {
+        updateData.coverImage = "";
+      }
+    }
+
     const blog = await Blog.findByIdAndUpdate(
       id,
       { ...updateData, updatedAt: Date.now() },
@@ -105,7 +128,7 @@ export const updateBlog = async (req, res) => {
     
     res.json({
       message: "Blog updated successfully",
-      blog
+      blog: formatBlog(blog, req)
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -125,7 +148,7 @@ export const deleteBlog = async (req, res) => {
     
     res.json({
       message: "Blog deleted successfully",
-      blog
+      blog: formatBlog(blog, req)
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -148,7 +171,7 @@ export const toggleBlogStatus = async (req, res) => {
     
     res.json({
       message: "Blog status updated successfully",
-      blog
+      blog: formatBlog(blog, req)
     });
   } catch (error) {
     res.status(500).json({ error: error.message });

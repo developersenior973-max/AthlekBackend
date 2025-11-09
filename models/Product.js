@@ -148,6 +148,11 @@ const productSchema = new mongoose.Schema({
     type: String,
     trim: true
   },
+  sizeGuideImage: {
+    type: String,
+    trim: true,
+    default: ""
+  },
   isActive: {
     type: Boolean,
     default: true

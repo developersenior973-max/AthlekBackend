@@ -17,6 +17,10 @@ const blogSchema = new mongoose.Schema({
     required: [true, "Content is required"],
     trim: true
   },
+  coverImage: {
+    type: String,
+    default: ""
+  },
   isActive: {
     type: Boolean,
     default: true

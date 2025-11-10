@@ -1,18 +1,72 @@
+import mongoose from "mongoose";
 import Bundle from "../models/Bundle.js";
+
+const buildFullImageUrl = (baseUrl, path) => {
+  if (!path) {
+    return null;
+  }
+  if (path.startsWith("http")) {
+    return path;
+  }
+  if (path.startsWith("/")) {
+    return `${baseUrl}${path}`;
+  }
+  return `${baseUrl}/${path}`;
+};
+
+const enhanceBundleWithImages = (bundle, baseUrl) => {
+  const bundleObj = bundle.toObject();
+  bundleObj.products = bundleObj.products.map(product => ({
+    ...product,
+    images: product.images ? product.images.map(img => buildFullImageUrl(baseUrl, img)) : []
+  }));
+  bundleObj.heroImage = buildFullImageUrl(baseUrl, bundleObj.heroImage);
+  bundleObj.galleryImages = Array.isArray(bundleObj.galleryImages)
+    ? bundleObj.galleryImages.map(img => buildFullImageUrl(baseUrl, img))
+    : [];
+  bundleObj.colorOptions = Array.isArray(bundleObj.colorOptions)
+    ? bundleObj.colorOptions.map(option => ({
+        ...option,
+        thumbnailImage: buildFullImageUrl(baseUrl, option.thumbnailImage),
+        galleryImages: Array.isArray(option.galleryImages)
+          ? option.galleryImages.map(img => buildFullImageUrl(baseUrl, img))
+          : [],
+      }))
+    : [];
+  bundleObj.packOptions = Array.isArray(bundleObj.packOptions)
+    ? bundleObj.packOptions.map(option => ({
+        ...option,
+        thumbnailImage: buildFullImageUrl(baseUrl, option.thumbnailImage),
+      }))
+    : [];
+  return bundleObj;
+};
+
+const parseJsonField = (value) => {
+  if (typeof value === "string") {
+    try {
+      return JSON.parse(value);
+    } catch (error) {
+      return value ? [value] : [];
+    }
+  }
+  return value;
+};
+
+const normalizeImageArray = (value) => {
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter(Boolean)
+    .map((img) => (typeof img === "string" ? img.trim() : img))
+    .filter(Boolean);
+};
 
 // Get all bundles
 export const getBundles = async (req, res) => {
   try {
     const bundles = await Bundle.find().populate("products");
     const baseUrl = `${req.protocol}://${req.get('host')}`;
-    const bundlesWithFullUrls = bundles.map(bundle => {
-      const bundleObj = bundle.toObject();
-      bundleObj.products = bundleObj.products.map(product => ({
-        ...product,
-        images: product.images ? product.images.map(img => `${baseUrl}${img}`) : []
-      }));
-      return bundleObj;
-    });
+    const bundlesWithFullUrls = bundles.map(bundle => enhanceBundleWithImages(bundle, baseUrl));
     res.json({ data: bundlesWithFullUrls });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -27,12 +81,7 @@ export const getBundleById = async (req, res) => {
       return res.status(404).json({ error: "Bundle not found" });
     }
     const baseUrl = `${req.protocol}://${req.get('host')}`;
-    const bundleObj = bundle.toObject();
-    bundleObj.products = bundleObj.products.map(product => ({
-      ...product,
-      images: product.images ? product.images.map(img => `${baseUrl}${img}`) : []
-    }));
-    res.json({ data: bundleObj });
+    res.json({ data: enhanceBundleWithImages(bundle, baseUrl) });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -41,40 +90,91 @@ export const getBundleById = async (req, res) => {
 // Create new bundle
 export const createBundle = async (req, res) => {
   try {
-    const bundleData = req.body;
+    const bundleData = { ...req.body };
 
-    // Validate product count (must be at least 2)
-    if (!bundleData.products || bundleData.products.length < 2) {
-      return res.status(400).json({
-        error: "Bundle must contain at least 2 products"
-      });
+    bundleData.galleryImages = normalizeImageArray(parseJsonField(bundleData.galleryImages));
+    const parsedColorOptions = parseJsonField(bundleData.colorOptions);
+    const parsedPackOptions = parseJsonField(bundleData.packOptions);
+    const parsedSizeOptions = parseJsonField(bundleData.sizeOptions);
+    const parsedGuarantees = parseJsonField(bundleData.guarantees);
+    const parsedLengthOptions = parseJsonField(bundleData.lengthOptions);
+
+    bundleData.colorOptions = Array.isArray(parsedColorOptions) ? parsedColorOptions : [];
+    bundleData.packOptions = Array.isArray(parsedPackOptions) ? parsedPackOptions : [];
+    bundleData.sizeOptions = Array.isArray(parsedSizeOptions) ? parsedSizeOptions.filter(Boolean) : [];
+    bundleData.guarantees = Array.isArray(parsedGuarantees) ? parsedGuarantees : [];
+    bundleData.lengthOptions = Array.isArray(parsedLengthOptions) ? parsedLengthOptions.filter(Boolean) : [];
+
+    if (typeof bundleData.sizePriceVariation === "string") {
+      try {
+        bundleData.sizePriceVariation = JSON.parse(bundleData.sizePriceVariation);
+      } catch (error) {
+        bundleData.sizePriceVariation = {};
+      }
     }
 
-    // Validate that all products exist
-    const Product = (await import("../models/Product.js")).default;
-    const products = await Product.find({ _id: { $in: bundleData.products } });
-
-    if (products.length !== bundleData.products.length) {
-      return res.status(400).json({
-        error: "Some products not found"
-      });
+    if (typeof bundleData.products === "string") {
+      try {
+        bundleData.products = JSON.parse(bundleData.products);
+      } catch {
+        bundleData.products = bundleData.products ? [bundleData.products] : [];
+      }
     }
 
-    // Remove category check
-
-    // Calculate original price from products if not provided
-    if (!bundleData.originalPrice) {
-      bundleData.originalPrice = products.reduce((sum, product) => sum + product.basePrice, 0);
+    if (!Array.isArray(bundleData.products)) {
+      bundleData.products = [];
     }
 
-    // Add bundle type based on product count
+    if (!bundleData.heroImage || bundleData.heroImage === "null" || bundleData.heroImage === "undefined") {
+      bundleData.heroImage = undefined;
+    }
+
+    // Ensure at least one pack option exists
+    if (!Array.isArray(bundleData.packOptions) || bundleData.packOptions.length === 0) {
+      const fallbackQuantity = bundleData.products?.length || 1;
+      bundleData.packOptions = [
+        {
+          name: `${fallbackQuantity}-Pack`,
+          quantity: fallbackQuantity,
+          totalPrice: Number(bundleData.bundlePrice) || 0,
+          pricePerItem:
+            fallbackQuantity > 0
+              ? Number(((Number(bundleData.bundlePrice) || 0) / fallbackQuantity).toFixed(2))
+              : 0,
+        },
+      ];
+    }
+
+    bundleData.packOptions = bundleData.packOptions.map((option) => {
+      const quantity = Number(option.quantity) || 0;
+      const totalPrice = Number(option.totalPrice) || 0;
+      const pricePerItem =
+        option.pricePerItem !== undefined
+          ? Number(option.pricePerItem)
+          : quantity > 0
+            ? Number((totalPrice / quantity).toFixed(2))
+            : 0;
+      return {
+        ...option,
+        quantity,
+        totalPrice,
+        pricePerItem,
+      };
+    });
+
+    // Add bundle type based on product count (fallback to pack count)
+    if (bundleData.products.length > 0) {
     bundleData.bundleType = `${bundleData.products.length}-products`;
+    } else {
+      bundleData.bundleType = `${bundleData.packOptions.length}-packs`;
+    }
 
     const bundle = new Bundle(bundleData);
     await bundle.save();
 
     const populatedBundle = await Bundle.findById(bundle._id).populate("products");
-    res.status(201).json({ data: populatedBundle });
+    const baseUrl = `${req.protocol}://${req.get('host')}`;
+    res.status(201).json({ data: enhanceBundleWithImages(populatedBundle, baseUrl) });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -84,37 +184,94 @@ export const createBundle = async (req, res) => {
 export const updateBundle = async (req, res) => {
   try {
     const { id } = req.params;
-    const updateData = req.body;
+    const updateData = { ...req.body };
 
-    // Validate product count (must be at least 2) if products are being updated
-    if (updateData.products && updateData.products.length < 2) {
-      return res.status(400).json({
-        error: "Bundle must contain at least 2 products"
+    updateData.galleryImages = normalizeImageArray(parseJsonField(updateData.galleryImages));
+
+    const parsedColorOptions = parseJsonField(updateData.colorOptions);
+    if (parsedColorOptions) {
+      updateData.colorOptions = parsedColorOptions;
+    }
+
+    const parsedPackOptions = parseJsonField(updateData.packOptions);
+    if (parsedPackOptions) {
+      updateData.packOptions = parsedPackOptions.map((option) => {
+        const quantity = Number(option.quantity) || 0;
+        const totalPrice = Number(option.totalPrice) || 0;
+        const pricePerItem =
+          option.pricePerItem !== undefined
+            ? Number(option.pricePerItem)
+            : quantity > 0
+              ? Number((totalPrice / quantity).toFixed(2))
+              : 0;
+        return {
+          ...option,
+          quantity,
+          totalPrice,
+          pricePerItem,
+        };
       });
     }
 
-    // Validate that all products exist if products are being updated
-    if (updateData.products) {
-      const Product = (await import("../models/Product.js")).default;
-      const products = await Product.find({ _id: { $in: updateData.products } });
-
-      if (products.length !== updateData.products.length) {
-        return res.status(400).json({
-          error: "Some products not found"
-        });
-      }
-
-      // Remove category check
-
-      // Add bundle type based on product count
-      updateData.bundleType = `${updateData.products.length}-products`;
+    if (!updateData.packOptions || updateData.packOptions.length === 0) {
+      const fallbackQuantity = updateData.products?.length || 1;
+      updateData.packOptions = [
+        {
+          name: `${fallbackQuantity}-Pack`,
+          quantity: fallbackQuantity,
+          totalPrice: Number(updateData.bundlePrice) || 0,
+          pricePerItem:
+            fallbackQuantity > 0
+              ? Number(((Number(updateData.bundlePrice) || 0) / fallbackQuantity).toFixed(2))
+              : 0,
+        },
+      ];
     }
 
-    // Calculate original price from products if not provided
-    if (!updateData.originalPrice && updateData.products && updateData.products.length > 0) {
-      const Product = (await import("../models/Product.js")).default;
-      const products = await Product.find({ _id: { $in: updateData.products } });
-      updateData.originalPrice = products.reduce((sum, product) => sum + product.basePrice, 0);
+    const parsedSizeOptions = parseJsonField(updateData.sizeOptions);
+    if (parsedSizeOptions) {
+      updateData.sizeOptions = parsedSizeOptions;
+    }
+
+    const parsedGuarantees = parseJsonField(updateData.guarantees);
+    if (parsedGuarantees) {
+      updateData.guarantees = parsedGuarantees;
+    }
+
+    const parsedLengthOptions = parseJsonField(updateData.lengthOptions);
+    if (parsedLengthOptions) {
+      updateData.lengthOptions = parsedLengthOptions;
+    }
+
+    if (typeof updateData.sizePriceVariation === "string") {
+      try {
+        updateData.sizePriceVariation = JSON.parse(updateData.sizePriceVariation);
+      } catch (error) {
+        updateData.sizePriceVariation = {};
+      }
+    }
+
+    if (typeof updateData.products === "string") {
+      try {
+        updateData.products = JSON.parse(updateData.products);
+      } catch {
+        updateData.products = updateData.products ? [updateData.products] : [];
+      }
+    }
+
+    if (!Array.isArray(updateData.products)) {
+      updateData.products = [];
+    }
+
+    if (updateData.heroImage === "" || updateData.heroImage === null || updateData.heroImage === "null" || updateData.heroImage === "undefined") {
+      updateData.heroImage = undefined;
+    }
+
+    // Add bundle type based on new data
+    if (updateData.products?.length) {
+      updateData.bundleType = `${updateData.products.length}-products`;
+    } else if (updateData.packOptions?.length) {
+      updateData.bundleType = `${updateData.packOptions.length}-packs`;
     }
 
     const bundle = await Bundle.findByIdAndUpdate(id, updateData, { new: true }).populate("products");
@@ -123,7 +280,8 @@ export const updateBundle = async (req, res) => {
       return res.status(404).json({ error: "Bundle not found" });
     }
 
-    res.json({ data: bundle });
+    const baseUrl = `${req.protocol}://${req.get('host')}`;
+    res.json({ data: enhanceBundleWithImages(bundle, baseUrl) });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -174,14 +332,7 @@ export const getActiveBundles = async (req, res) => {
       console.log(`Bundle: ${bundle.name}, Start: ${bundle.startDate}, End: ${bundle.endDate}, Category: ${bundle.category}`);
     });
     const baseUrl = `${req.protocol}://${req.get('host')}`;
-    const bundlesWithFullUrls = bundles.map(bundle => {
-      const bundleObj = bundle.toObject();
-      bundleObj.products = bundleObj.products.map(product => ({
-        ...product,
-        images: product.images ? product.images.map(img => `${baseUrl}${img}`) : []
-      }));
-      return bundleObj;
-    });
+    const bundlesWithFullUrls = bundles.map(bundle => enhanceBundleWithImages(bundle, baseUrl));
     res.json({ data: bundlesWithFullUrls });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -208,15 +359,32 @@ export const getActiveBundlesByCategory = async (req, res) => {
       ...categoryFilter
     }).populate("products");
     const baseUrl = `${req.protocol}://${req.get('host')}`;
-    const bundlesWithFullUrls = bundles.map(bundle => {
-      const bundleObj = bundle.toObject();
-      bundleObj.products = bundleObj.products.map(product => ({
-        ...product,
-        images: product.images ? product.images.map(img => `${baseUrl}${img}`) : []
-      }));
-      return bundleObj;
-    });
+    const bundlesWithFullUrls = bundles.map(bundle => enhanceBundleWithImages(bundle, baseUrl));
     res.json({ data: bundlesWithFullUrls });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const getPublicBundleDetail = async (req, res) => {
+  try {
+    const { id } = req.params;
+    let bundle = null;
+
+    if (mongoose.Types.ObjectId.isValid(id)) {
+      bundle = await Bundle.findById(id).populate("products");
+    }
+
+    if (!bundle) {
+      bundle = await Bundle.findOne({ name: id }).populate("products");
+    }
+
+    if (!bundle) {
+      return res.status(404).json({ error: "Bundle not found" });
+    }
+
+    const baseUrl = `${req.protocol}://${req.get('host')}`;
+    res.json({ data: enhanceBundleWithImages(bundle, baseUrl) });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -251,14 +419,7 @@ export const calculateBundleDiscount = async (req, res) => {
       ]
     }).populate("products");
     const baseUrl = `${req.protocol}://${req.get('host')}`;
-    const bundlesWithFullUrls = bundles.map(bundle => {
-      const bundleObj = bundle.toObject();
-      bundleObj.products = bundleObj.products.map(product => ({
-        ...product,
-        images: product.images ? product.images.map(img => `${baseUrl}${img}`) : []
-      }));
-      return bundleObj;
-    });
+    const bundlesWithFullUrls = bundles.map(bundle => enhanceBundleWithImages(bundle, baseUrl));
 
     let bestDiscount = null;
     let appliedBundle = null;

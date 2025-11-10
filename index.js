@@ -46,7 +46,8 @@ app.use(helmet({
 app.use(cors({
   origin: [
     'https://34.18.0.53',
-    'http://34.18.0.53:3001/',
+    'http://34.18.0.53:3000',
+    'http://34.18.0.53:3001',
     'http://localhost:3000',
     'http://localhost:3001',
     'http://localhost:3002',

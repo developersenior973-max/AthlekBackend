@@ -38,15 +38,18 @@ const storage = multer.diskStorage({
 const upload = multer({
   storage: storage,
   limits: {
-    fileSize: 5 * 1024 * 1024 // 5MB limit
+    fileSize: 50 * 1024 * 1024 // 50MB limit to support short hero videos
   },
   fileFilter: (req, file, cb) => {
     console.log('🔍 Checking file:', file.originalname, file.mimetype);
-    // Check file type
-    if (file.mimetype.startsWith('image/')) {
+    const isImage = file.mimetype.startsWith('image/');
+    const allowedVideoTypes = ['video/mp4', 'video/quicktime', 'video/webm'];
+    const isVideo = allowedVideoTypes.includes(file.mimetype);
+
+    if (isImage || isVideo) {
       cb(null, true);
     } else {
-      cb(new Error('Only image files are allowed!'), false);
+      cb(new Error('Only image files or MP4/MOV/WEBM videos are allowed!'), false);
     }
   }
 });
@@ -56,7 +59,7 @@ const handleUploadError = (error, req, res, next) => {
   console.error('❌ Multer error:', error);
   if (error instanceof multer.MulterError) {
     if (error.code === 'LIMIT_FILE_SIZE') {
-      return res.status(400).json({ error: 'File too large. Maximum size is 5MB.' });
+      return res.status(400).json({ error: 'File too large. Maximum size is 50MB.' });
     }
   }
   res.status(400).json({ error: error.message });
@@ -73,29 +76,32 @@ router.post('/', upload.single('image'), handleUploadError, (req, res) => {
     if (!req.file) {
       console.log('❌ No file provided');
       return res.status(400).json({ 
-        error: 'No image file provided' 
+        error: 'No image or video file provided' 
       });
     }
 
     console.log('✅ File received:', req.file.originalname);
     console.log('📁 Saved as:', req.file.filename);
 
-    // Return the image URL
+    const fileType = req.file.mimetype.startsWith('video/') ? 'video' : 'image';
+
+    // Return the asset URL
     const baseUrl = `${req.protocol}://${req.get('host')}`;
     const prefixRaw = process.env.API_BASE_PATH || '';
     const prefix = prefixRaw ? (prefixRaw.startsWith('/') ? prefixRaw : `/${prefixRaw}`) : '';
     const imageUrl = `${baseUrl}${prefix}/uploads/${req.file.filename}`;
     
-    console.log('🖼️ Image URL:', imageUrl);
+    console.log('🖼️ File URL:', imageUrl);
     
     res.json({
-      message: 'Image uploaded successfully',
-      imageUrl: imageUrl
+      message: fileType === 'video' ? 'Video uploaded successfully' : 'Image uploaded successfully',
+      imageUrl: imageUrl,
+      fileType
     });
   } catch (error) {
     console.error('❌ Upload error:', error);
     res.status(500).json({ 
-      error: 'Failed to upload image' 
+      error: 'Failed to upload file' 
     });
   }
 });

@@ -196,14 +196,14 @@ const sendOrderStatusUpdateEmail = async (order, oldStatus, newStatus) => {
             ${order.items.map(item => `
               <div style="border-bottom: 1px solid #eee; padding: 10px 0;">
                 <p><strong>${item.productName}</strong></p>
-                <p>Quantity: ${item.quantity}</p>
-                <p>Price: AED${item.price}</p>
+                <p>Quantity: ${item.quantity}</p>                
+                <p>Price: AED${item.price.toFixed(2)}</p>
               </div>
             `).join('')}
           </div>
           
           <div style="background: #f0f0f0; padding: 15px; border-radius: 5px;">
-            <p><strong>Total Amount:</strong> AED${order.total}</p>
+            <p><strong>Total Amount:</strong> AED${order.total.toFixed(2)}</p>
           </div>
           
           <p>Thank you for shopping with us!</p>

@@ -224,8 +224,8 @@ export const sendOrderConfirmationEmail = async (order) => {
                     <td style="border: 1px solid #ddd; padding: 12px; text-align: center; color: #666;">${item.variant?.size || 'Standard'}</td>
                     <td style="border: 1px solid #ddd; padding: 12px; text-align: center; color: #666;">${item.variant?.color || 'Default'}</td>
                     <td style="border: 1px solid #ddd; padding: 12px; text-align: center; color: #666;">${item.quantity}</td>
-                    <td style="border: 1px solid #ddd; padding: 12px; text-align: right; color: #666;">AED ${item.price}</td>
-                    <td style="border: 1px solid #ddd; padding: 12px; text-align: right; color: #666; font-weight: bold;">AED ${item.totalPrice}</td>
+                    <td style="border: 1px solid #ddd; padding: 12px; text-align: right; color: #666;">AED ${item.price.toFixed(2)}</td>
+                    <td style="border: 1px solid #ddd; padding: 12px; text-align: right; color: #666; font-weight: bold;">AED ${item.totalPrice.toFixed(2)}</td>
                   </tr>
                 `).join('')}
               </tbody>
@@ -237,21 +237,21 @@ export const sendOrderConfirmationEmail = async (order) => {
             <h3 style="color: #333; margin-bottom: 20px; font-size: 20px; text-align: center;">Order Summary</h3>
             <div style="display: flex; justify-content: space-between; margin: 10px 0; padding: 8px 0; border-bottom: 1px solid #ddd;">
               <span style="color: #666;">Subtotal:</span>
-              <span style="color: #666; font-weight: bold;">AED ${order.subtotal}</span>
+              <span style="color: #666; font-weight: bold;">AED ${order.subtotal.toFixed(2)}</span>
             </div>
             ${order.bundleDiscount > 0 ? `
               <div style="display: flex; justify-content: space-between; margin: 10px 0; padding: 8px 0; border-bottom: 1px solid #ddd;">
                 <span style="color: #28a745;">Bundle Discount:</span>
-                <span style="color: #28a745; font-weight: bold;">-AED ${order.bundleDiscount}</span>
+                <span style="color: #28a745; font-weight: bold;">-AED ${order.bundleDiscount.toFixed(2)}</span>
               </div>
             ` : ''}
             <div style="display: flex; justify-content: space-between; margin: 10px 0; padding: 8px 0; border-bottom: 1px solid #ddd;">
               <span style="color: #666;">Shipping:</span>
-              <span style="color: #666; font-weight: bold;">${order.shippingCost === 0 ? 'FREE' : `AED ${order.shippingCost}`}</span>
+              <span style="color: #666; font-weight: bold;">${order.shippingCost === 0 ? 'FREE' : `AED ${order.shippingCost.toFixed(2)}`}</span>
             </div>
             <div style="display: flex; justify-content: space-between; margin: 20px 0 10px 0; padding: 15px 0; border-top: 2px solid #cbf26c; border-bottom: 2px solid #cbf26c;">
               <span style="color: #333; font-size: 18px; font-weight: bold;">TOTAL PAID:</span>
-              <span style="color: #333; font-size: 18px; font-weight: bold;">AED ${order.total}</span>
+              <span style="color: #333; font-size: 18px; font-weight: bold;">AED ${order.total.toFixed(2)}</span>
             </div>
           </div>
           

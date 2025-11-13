@@ -31,7 +31,7 @@ const orderSchema = new mongoose.Schema({
       productId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "Product",
-        required: true,
+        required: false,
       },
       productName: {
         type: String,
@@ -54,6 +54,31 @@ const orderSchema = new mongoose.Schema({
       totalPrice: {
         type: Number,
         required: true,
+      },
+      // Bundle-specific fields
+      isBundle: {
+        type: Boolean,
+        default: false,
+      },
+      bundleId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Bundle",
+      },
+      bundleDetails: {
+        selectedPack: {
+          name: String,
+          quantity: Number,
+          totalPrice: Number,
+          pricePerItem: Number,
+          tag: String,
+        },
+        selectedSize: String,
+        selectedLength: String,
+        selectedColor: {
+          name: String,
+          description: String,
+        },
+        dealTag: String,
       },
     },
   ],

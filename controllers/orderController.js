@@ -115,6 +115,12 @@ const sendOrderConfirmationEmail = async (order) => {
             <p><strong>Order Number:</strong> ${order.orderNumber}</p>
             <p><strong>Order Date:</strong> ${new Date(order.createdAt).toLocaleDateString()}</p>
             <p><strong>Status:</strong> ${order.status}</p>
+            ${order.customer.address && order.customer.address.street ? `
+              <h3 style="margin-top: 15px;">Shipping Address</h3>
+              <p>${order.customer.address.street}</p>
+              <p>${order.customer.address.city}, ${order.customer.address.state} ${order.customer.address.zipCode}</p>
+              <p>${order.customer.address.country || 'United Arab Emirates'}</p>
+            ` : ''}
           </div>
           
           <div style="margin: 20px 0;">
@@ -122,6 +128,14 @@ const sendOrderConfirmationEmail = async (order) => {
             ${order.items.map(item => `
               <div style="border-bottom: 1px solid #eee; padding: 10px 0;">
                 <p><strong>${item.productName}</strong></p>
+                ${item.isBundle && item.bundleDetails ? `
+                  ${item.bundleDetails.selectedPack ? `<p>Pack: ${item.bundleDetails.selectedPack.name} (${item.bundleDetails.selectedPack.quantity} pieces)</p>` : ''}
+                  ${item.bundleDetails.selectedColor?.name ? `<p>Color: ${item.bundleDetails.selectedColor.name}</p>` : ''}
+                  ${item.bundleDetails.selectedSize ? `<p>Size: ${item.bundleDetails.selectedSize}</p>` : ''}
+                  ${item.bundleDetails.selectedLength ? `<p>Length: ${item.bundleDetails.selectedLength}</p>` : ''}
+                ` : ''}
+                ${item.variant?.size ? `<p>Size: ${item.variant.size}</p>` : ''}
+                ${item.variant?.color ? `<p>Color: ${item.variant.color}</p>` : ''}
                 <p>Quantity: ${item.quantity}</p>
                 <p>Price: AED${item.price}</p>
                 <p>Total: AED${item.totalPrice}</p>
@@ -196,6 +210,14 @@ const sendOrderStatusUpdateEmail = async (order, oldStatus, newStatus) => {
             ${order.items.map(item => `
               <div style="border-bottom: 1px solid #eee; padding: 10px 0;">
                 <p><strong>${item.productName}</strong></p>
+                ${item.isBundle && item.bundleDetails ? `
+                  ${item.bundleDetails.selectedPack ? `<p>Pack: ${item.bundleDetails.selectedPack.name} (${item.bundleDetails.selectedPack.quantity} pieces)</p>` : ''}
+                  ${item.bundleDetails.selectedColor?.name ? `<p>Color: ${item.bundleDetails.selectedColor.name}</p>` : ''}
+                  ${item.bundleDetails.selectedSize ? `<p>Size: ${item.bundleDetails.selectedSize}</p>` : ''}
+                  ${item.bundleDetails.selectedLength ? `<p>Length: ${item.bundleDetails.selectedLength}</p>` : ''}
+                ` : ''}
+                ${item.variant?.size ? `<p>Size: ${item.variant.size}</p>` : ''}
+                ${item.variant?.color ? `<p>Color: ${item.variant.color}</p>` : ''}
                 <p>Quantity: ${item.quantity}</p>                
                 <p>Price: AED${item.price.toFixed(2)}</p>
               </div>
@@ -270,7 +292,7 @@ export const createOrder = async (req, res) => {
             productId = new mongoose.Types.ObjectId();
           }
 
-          orderItems.push({
+          const orderItem = {
             productId: productId,
             productName: item.productName,
             variant: {
@@ -281,12 +303,29 @@ export const createOrder = async (req, res) => {
             quantity: item.quantity,
             price: item.price,
             totalPrice: itemTotal,
-          });
+          };
+
+          // Add bundle details if it's a bundle
+          if (item.isBundle) {
+            orderItem.isBundle = true;
+            if (item.bundleId) {
+              try {
+                orderItem.bundleId = new mongoose.Types.ObjectId(item.bundleId);
+              } catch (error) {
+                console.error(`Error converting bundleId ${item.bundleId}:`, error);
+              }
+            }
+            if (item.bundleDetails) {
+              orderItem.bundleDetails = item.bundleDetails;
+            }
+          }
+
+          orderItems.push(orderItem);
         } else {
           const itemTotal = product.basePrice * item.quantity;
           subtotal += itemTotal;
 
-          orderItems.push({
+          const orderItem = {
             productId: product._id,
             productName: product.title,
             variant: {
@@ -297,7 +336,24 @@ export const createOrder = async (req, res) => {
             quantity: item.quantity,
             price: product.basePrice,
             totalPrice: itemTotal,
-          });
+          };
+
+          // Add bundle details if it's a bundle
+          if (item.isBundle) {
+            orderItem.isBundle = true;
+            if (item.bundleId) {
+              try {
+                orderItem.bundleId = new mongoose.Types.ObjectId(item.bundleId);
+              } catch (error) {
+                console.error(`Error converting bundleId ${item.bundleId}:`, error);
+              }
+            }
+            if (item.bundleDetails) {
+              orderItem.bundleDetails = item.bundleDetails;
+            }
+          }
+
+          orderItems.push(orderItem);
         }
       } catch (error) {
         console.error(`Error processing item ${item.productId}:`, error);

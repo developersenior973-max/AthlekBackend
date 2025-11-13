@@ -9,6 +9,26 @@ const bundleSchema = new mongoose.Schema({
     type: String,
     required: false,
   },
+  description: {
+    type: String,
+    required: false,
+  },
+  purpose: {
+    type: String,
+    required: false,
+  },
+  featuresAndFit: {
+    type: String,
+    required: false,
+  },
+  materialAndCare: {
+    type: String,
+    required: false,
+  },
+  care: {
+    type: String,
+    required: false,
+  },
   heroImage: {
     type: String,
     required: false,

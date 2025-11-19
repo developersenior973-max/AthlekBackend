@@ -370,7 +370,7 @@ export const createOrder = async (req, res) => {
           productId = new mongoose.Types.ObjectId();
         }
 
-        orderItems.push({
+        const fallbackOrderItem = {
           productId: productId,
           productName: item.productName,
           variant: {
@@ -381,7 +381,24 @@ export const createOrder = async (req, res) => {
           quantity: item.quantity,
           price: item.price,
           totalPrice: itemTotal,
-        });
+        };
+
+        // Add bundle details if it's a bundle (important for fallback case)
+        if (item.isBundle) {
+          fallbackOrderItem.isBundle = true;
+          if (item.bundleId) {
+            try {
+              fallbackOrderItem.bundleId = new mongoose.Types.ObjectId(item.bundleId);
+            } catch (error) {
+              console.error(`Error converting bundleId ${item.bundleId}:`, error);
+            }
+          }
+          if (item.bundleDetails) {
+            fallbackOrderItem.bundleDetails = item.bundleDetails;
+          }
+        }
+
+        orderItems.push(fallbackOrderItem);
       }
     }
 

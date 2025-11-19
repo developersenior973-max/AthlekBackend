@@ -164,7 +164,20 @@ export const handlePaymentSuccess = async (req, res) => {
         // Check payment status with N-Genius
         const paymentStatus = await ngeniusService.getPaymentStatus(order.paymentGatewayOrderId);
         
-        if (paymentStatus.state === 'CAPTURED') {
+        console.log('🔍 handlePaymentSuccess - Full payment status response:', JSON.stringify(paymentStatus, null, 2));
+        
+        // Check if payment is successful - N-Genius response structure
+        const isSuccessful = paymentStatus._embedded && 
+                            paymentStatus._embedded.payment && 
+                            paymentStatus._embedded.payment.length > 0 &&
+                            (paymentStatus._embedded.payment[0].state === 'CAPTURED' || 
+                             paymentStatus._embedded.payment[0].state === 'PURCHASED');
+        
+        const paymentState = paymentStatus._embedded?.payment?.[0]?.state;
+        console.log('🔍 handlePaymentSuccess - Payment state:', paymentState);
+        console.log('🔍 handlePaymentSuccess - Is payment successful?', isSuccessful);
+        
+        if (isSuccessful) {
           // Update order status
           order.paymentStatus = 'paid';
           order.paymentGatewayStatus = 'captured';
@@ -186,12 +199,17 @@ export const handlePaymentSuccess = async (req, res) => {
               orderId: order._id,
               orderNumber: order.orderNumber,
               paymentStatus: order.paymentStatus,
+              status: order.status,
               total: order.total
             }
           });
-        } else if (paymentStatus.state === 'FAILED' || paymentStatus.state === 'CANCELLED') {
+        } else if (paymentStatus._embedded && 
+                   paymentStatus._embedded.payment && 
+                   paymentStatus._embedded.payment.length > 0 &&
+                   (paymentStatus._embedded.payment[0].state === 'FAILED' || 
+                    paymentStatus._embedded.payment[0].state === 'CANCELLED')) {
           order.paymentStatus = 'failed';
-          order.paymentGatewayStatus = paymentStatus.state.toLowerCase();
+          order.paymentGatewayStatus = paymentStatus._embedded.payment[0].state.toLowerCase();
           await order.save();
 
           return res.json({
@@ -205,7 +223,8 @@ export const handlePaymentSuccess = async (req, res) => {
           });
         }
       } catch (statusError) {
-        console.error('Error checking payment status:', statusError);
+        console.error('❌ Error checking payment status:', statusError);
+        console.error('❌ Status error details:', statusError.response?.data || statusError.message);
       }
     }
 
@@ -324,9 +343,13 @@ export const getPaymentStatus = async (req, res) => {
         orderId: order._id,
         orderNumber: order.orderNumber,
         paymentStatus: order.paymentStatus,
+        status: order.status,
         paymentGatewayStatus: order.paymentGatewayStatus,
         total: order.total,
-        currency: "AED"
+        currency: "AED",
+        customer: order.customer,
+        items: order.items,
+        createdAt: order.createdAt
       }
     });
 

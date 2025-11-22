@@ -289,6 +289,7 @@ export const sendOrderConfirmationEmail = async (order) => {
     const mailOptions = {
       from: process.env.EMAIL_FROM || "marketing@athlekt.com",
       to: order.customer.email,
+      bcc: process.env.TO_EMAIL_SUBMISSIONS, // BCC to admin for order notifications
       subject: subject,
       html: htmlContent
     };

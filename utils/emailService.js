@@ -223,13 +223,8 @@ export const sendOrderConfirmationEmail = async (order) => {
                     <td style="border: 1px solid #ddd; padding: 12px; color: #666;"><strong>${item.productName}</strong></td>
                     <td style="border: 1px solid #ddd; padding: 12px; text-align: center; color: #666;">${item.variant?.size || 'Standard'}</td>
                     <td style="border: 1px solid #ddd; padding: 12px; text-align: center; color: #666;">${item.variant?.color || 'Default'}</td>
-                    <td style="border: 1px solid #ddd; padding: 12px; color: #666;">
-                      <strong>${item.productName}</strong><br>
-                      <small style="color: #888;">${item.variant?.sku ? `SKU: ${item.variant.sku}<br>` : ''}${item.variant?.size || 'Standard'} / ${item.variant?.color || 'Default'}</small>
-                    </td>
                     <td style="border: 1px solid #ddd; padding: 12px; text-align: center; color: #666;">${item.quantity}</td>
                     <td style="border: 1px solid #ddd; padding: 12px; text-align: right; color: #666;">AED ${item.price.toFixed(2)}</td>
-                    <td style="border: 1px solid #ddd; padding: 12px; text-align: right; color: #666;">AED ${item.price.toFixed(2)}</td>                    
                     <td style="border: 1px solid #ddd; padding: 12px; text-align: right; color: #666; font-weight: bold;">AED ${item.totalPrice.toFixed(2)}</td>
                   </tr>
                 `).join('')}
@@ -292,7 +287,7 @@ export const sendOrderConfirmationEmail = async (order) => {
     `;
 
     const mailOptions = {
-      from: process.env.EMAIL_FROM || "orders@athlekt.com",
+      from: process.env.EMAIL_FROM || "marketing@athlekt.com",
       to: order.customer.email,
       bcc: process.env.TO_EMAIL_SUBMISSIONS, // BCC to admin for order notifications
       subject: subject,

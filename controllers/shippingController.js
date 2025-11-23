@@ -1,4 +1,3 @@
-// shippingController.js - FULL UPDATED CODE
 import ShippingRule from "../models/ShippingRule.js";
 
 // Get all shipping rules
@@ -27,13 +26,13 @@ export const getShippingRuleById = async (req, res) => {
 // Create shipping rule
 export const createShippingRule = async (req, res) => {
   try {
-    console.log('Creating shipping rule with data:', req.body);
+    console.log('🔄 Creating shipping rule with data:', req.body);
     const rule = new ShippingRule(req.body);
     await rule.save();
-    console.log('Shipping rule created successfully:', rule);
+    console.log('✅ Shipping rule created successfully:', rule);
     res.status(201).json({ data: rule });
   } catch (error) {
-    console.error('Error creating shipping rule:', error);
+    console.error('❌ Error creating shipping rule:', error);
     res.status(400).json({ error: error.message });
   }
 };
@@ -41,7 +40,7 @@ export const createShippingRule = async (req, res) => {
 // Update shipping rule
 export const updateShippingRule = async (req, res) => {
   try {
-    console.log('Updating shipping rule:', req.params.id, req.body);
+    console.log('🔄 Updating shipping rule:', req.params.id, req.body);
     const rule = await ShippingRule.findByIdAndUpdate(
       req.params.id,
       req.body,
@@ -69,7 +68,7 @@ export const deleteShippingRule = async (req, res) => {
   }
 };
 
-// Calculate shipping cost - SIMPLE VERSION
+// Calculate shipping cost - DEBUG VERSION
 export const calculateShipping = async (req, res) => {
   try {
     const { subtotal, region = 'US', weight = 0 } = req.body;
@@ -78,61 +77,67 @@ export const calculateShipping = async (req, res) => {
       return res.status(400).json({ error: "Valid subtotal is required" });
     }
 
-    console.log(`Calculating shipping for subtotal: AED${subtotal}, region: ${region}`);
+    console.log('🚀 CALCULATE SHIPPING DEBUG START ==========');
+    console.log('📦 Request Data:', { subtotal, region, weight });
+    
+    // STEP 1: Check all rules in database
+    const allRules = await ShippingRule.find({ isActive: true });
+    console.log('📋 All active rules in DB:', allRules.map(r => ({
+      name: r.name,
+      region: r.region,
+      shippingCost: r.shippingCost,
+      freeShippingAt: r.freeShippingAt,
+      isActive: r.isActive
+    })));
 
-    // Find active rule for the specific region (NO AMOUNT RANGE CHECK)
+    // STEP 2: Find rule for exact region
     let shippingRule = await ShippingRule.findOne({
       isActive: true,
       region: region
     }).sort({ priority: 1 });
 
-    // If no specific region rule, try GLOBAL rule
+    console.log('🔍 Found rule for region', region, ':', shippingRule);
+
+    // STEP 3: If no rule found, use default
     if (!shippingRule) {
-      shippingRule = await ShippingRule.findOne({
-        isActive: true,
-        region: 'GLOBAL'
-      }).sort({ priority: 1 });
-    }
-
-    if (shippingRule) {
-      console.log(`Using rule: ${shippingRule.name} for region: ${shippingRule.region}`);
-      
-      const isFreeShipping = subtotal >= shippingRule.freeShippingAt;
-      const shippingCost = isFreeShipping ? 0 : shippingRule.shippingCost;
-
-      const result = {
-        shippingCost,
-        isFreeShipping,
-        deliveryDays: shippingRule.deliveryDays,
-        rule: {
-          name: shippingRule.name,
-          region: shippingRule.region,
-          freeShippingAt: shippingRule.freeShippingAt,
-          shippingCost: shippingRule.shippingCost
-        },
-        remainingForFreeShipping: isFreeShipping ? 0 : Math.max(0, shippingRule.freeShippingAt - subtotal)
+      console.log('⚠️ No rule found for region, using default');
+      const defaultResult = {
+        shippingCost: subtotal >= 100 ? 0 : 10,
+        isFreeShipping: subtotal >= 100,
+        deliveryDays: 3,
+        rule: { name: "Default", region: region, freeShippingAt: 100, shippingCost: 10 },
+        remainingForFreeShipping: subtotal >= 100 ? 0 : Math.max(0, 100 - subtotal)
       };
-
-      return res.json(result);
+      console.log('📤 Sending default result:', defaultResult);
+      return res.json(defaultResult);
     }
 
-    // Fallback to default values
+    // STEP 4: Calculate shipping based on found rule
+    console.log('🎯 Using rule:', shippingRule.name);
+    console.log('💰 Rule details - Shipping Cost:', shippingRule.shippingCost, 'Free at:', shippingRule.freeShippingAt);
+    
+    const isFreeShipping = subtotal >= shippingRule.freeShippingAt;
+    const shippingCost = isFreeShipping ? 0 : shippingRule.shippingCost;
+
     const result = {
-      shippingCost: subtotal >= 100 ? 0 : 10,
-      isFreeShipping: subtotal >= 100,
-      deliveryDays: 3,
+      shippingCost,
+      isFreeShipping,
+      deliveryDays: shippingRule.deliveryDays,
       rule: {
-        name: "Default Shipping",
-        region: region,
-        freeShippingAt: 100,
-        shippingCost: 10
+        name: shippingRule.name,
+        region: shippingRule.region,
+        freeShippingAt: shippingRule.freeShippingAt,
+        shippingCost: shippingRule.shippingCost
       },
-      remainingForFreeShipping: subtotal >= 100 ? 0 : Math.max(0, 100 - subtotal)
+      remainingForFreeShipping: isFreeShipping ? 0 : Math.max(0, shippingRule.freeShippingAt - subtotal)
     };
 
+    console.log('📤 Final result being sent:', result);
+    console.log('✅ CALCULATE SHIPPING DEBUG END ==========\n');
+    
     return res.json(result);
   } catch (error) {
-    console.error('Error calculating shipping:', error);
+    console.error('❌ Error calculating shipping:', error);
     res.status(500).json({ error: error.message });
   }
 };

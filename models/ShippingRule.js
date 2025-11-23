@@ -9,7 +9,7 @@ const shippingRuleSchema = new mongoose.Schema({
   region: {
     type: String,
     required: true,
-    enum: ['US', 'INTL', 'EU', 'ASIA', 'GLOBAL'],
+    enum: ['US', 'UAE', 'INTL', 'EU', 'ASIA', 'GLOBAL'], // YAHAN UAE ADD KAREN
     default: 'US'
   },
   minWeight: {

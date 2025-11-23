@@ -210,6 +210,7 @@ export const sendOrderConfirmationEmail = async (order) => {
               <thead>
                 <tr style="background-color: #f8f9fa;">
                   <th style="border: 1px solid #ddd; padding: 12px; text-align: left; color: #333;">Item</th>
+                  <th style="border: 1px solid #ddd; padding: 12px; text-align: left; color: #333;">SKU</th>
                   <th style="border: 1px solid #ddd; padding: 12px; text-align: center; color: #333;">Size</th>
                   <th style="border: 1px solid #ddd; padding: 12px; text-align: center; color: #333;">Color</th>
                   <th style="border: 1px solid #ddd; padding: 12px; text-align: center; color: #333;">Qty</th>
@@ -220,7 +221,8 @@ export const sendOrderConfirmationEmail = async (order) => {
               <tbody>
                 ${order.items.map(item => `
                   <tr>
-                    <td style="border: 1px solid #ddd; padding: 12px; color: #666;"><strong>${item.productName}</strong></td>
+                    <td style="border: 1px solid #ddd; padding: 12px; color: #666;"><strong>${item.productName}</strong></td>                    
+                    <td style="border: 1px solid #ddd; padding: 12px; text-align: left; color: #666;">${item.variant?.sku || 'N/A'}</td>
                     <td style="border: 1px solid #ddd; padding: 12px; text-align: center; color: #666;">${item.variant?.size || 'Standard'}</td>
                     <td style="border: 1px solid #ddd; padding: 12px; text-align: center; color: #666;">${item.variant?.color || 'Default'}</td>
                     <td style="border: 1px solid #ddd; padding: 12px; text-align: center; color: #666;">${item.quantity}</td>

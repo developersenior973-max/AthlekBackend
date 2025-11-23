@@ -26,10 +26,13 @@ export const getShippingRuleById = async (req, res) => {
 // Create shipping rule
 export const createShippingRule = async (req, res) => {
   try {
+    console.log('Creating shipping rule with data:', req.body);
     const rule = new ShippingRule(req.body);
     await rule.save();
+    console.log('Shipping rule created successfully:', rule);
     res.status(201).json({ data: rule });
   } catch (error) {
+    console.error('Error creating shipping rule:', error);
     res.status(400).json({ error: error.message });
   }
 };
@@ -37,6 +40,7 @@ export const createShippingRule = async (req, res) => {
 // Update shipping rule
 export const updateShippingRule = async (req, res) => {
   try {
+    console.log('Updating shipping rule:', req.params.id, req.body);
     const rule = await ShippingRule.findByIdAndUpdate(
       req.params.id,
       req.body,
@@ -64,7 +68,7 @@ export const deleteShippingRule = async (req, res) => {
   }
 };
 
-// Calculate shipping cost (public endpoint) - UPDATED
+// Calculate shipping cost (public endpoint) - FIXED VERSION
 export const calculateShipping = async (req, res) => {
   try {
     const { subtotal, region = 'US', weight = 0 } = req.body;
@@ -75,8 +79,8 @@ export const calculateShipping = async (req, res) => {
 
     console.log(`Calculating shipping for subtotal: AED${subtotal}, region: ${region}, weight: ${weight}`);
 
-    // Priority 1: Exact match for region and amount range
-    const exactMatchRules = await ShippingRule.find({
+    // Step 1: Try exact match for the specific region with amount range
+    let applicableRules = await ShippingRule.find({
       isActive: true,
       region: region,
       minOrderAmount: { $lte: subtotal },
@@ -85,55 +89,73 @@ export const calculateShipping = async (req, res) => {
       maxWeight: { $gte: weight }
     }).sort({ priority: 1 });
 
-    console.log(`Found ${exactMatchRules.length} exact match rules for region: ${region}`);
+    console.log(`Found ${applicableRules.length} exact region match rules for ${region}`);
 
-    if (exactMatchRules.length > 0) {
-      const selectedRule = exactMatchRules[0];
-      return applyShippingRule(selectedRule, subtotal, res);
+    // Step 2: If no exact region match, try GLOBAL rules with amount range
+    if (applicableRules.length === 0) {
+      applicableRules = await ShippingRule.find({
+        isActive: true,
+        region: 'GLOBAL',
+        minOrderAmount: { $lte: subtotal },
+        maxOrderAmount: { $gte: subtotal },
+        minWeight: { $lte: weight },
+        maxWeight: { $gte: weight }
+      }).sort({ priority: 1 });
+      console.log(`Found ${applicableRules.length} GLOBAL match rules`);
     }
 
-    // Priority 2: GLOBAL rules that match amount range
-    const globalMatchRules = await ShippingRule.find({
-      isActive: true,
-      region: 'GLOBAL',
-      minOrderAmount: { $lte: subtotal },
-      maxOrderAmount: { $gte: subtotal },
-      minWeight: { $lte: weight },
-      maxWeight: { $gte: weight }
-    }).sort({ priority: 1 });
-
-    console.log(`Found ${globalMatchRules.length} global match rules`);
-
-    if (globalMatchRules.length > 0) {
-      const selectedRule = globalMatchRules[0];
-      return applyShippingRule(selectedRule, subtotal, res);
+    // Step 3: If still no rules found, try any active rule for the region (without amount range)
+    if (applicableRules.length === 0) {
+      applicableRules = await ShippingRule.find({
+        isActive: true,
+        region: region
+      }).sort({ priority: 1 });
+      console.log(`Found ${applicableRules.length} region rules without amount match`);
     }
 
-    // Priority 3: Any active rule for the specific region (without amount range check)
-    const anyRegionRule = await ShippingRule.findOne({
-      isActive: true,
-      region: region
-    }).sort({ priority: 1 });
-
-    if (anyRegionRule) {
-      console.log(`Found region rule without amount match: ${anyRegionRule.name}`);
-      return applyShippingRule(anyRegionRule, subtotal, res);
+    // Step 4: If still no rules, try any active GLOBAL rule (without amount range)
+    if (applicableRules.length === 0) {
+      applicableRules = await ShippingRule.find({
+        isActive: true,
+        region: 'GLOBAL'
+      }).sort({ priority: 1 });
+      console.log(`Found ${applicableRules.length} GLOBAL rules without amount match`);
     }
 
-    // Priority 4: Any active GLOBAL rule (without amount range check)
-    const anyGlobalRule = await ShippingRule.findOne({
-      isActive: true,
-      region: 'GLOBAL'
-    }).sort({ priority: 1 });
+    if (applicableRules.length > 0) {
+      // Use the highest priority rule (lowest number = highest priority)
+      const selectedRule = applicableRules[0];
+      
+      console.log(`Selected rule: ${selectedRule.name}, Region: ${selectedRule.region}`);
+      console.log(`Rule details: minOrder=${selectedRule.minOrderAmount}, maxOrder=${selectedRule.maxOrderAmount}, shippingCost=${selectedRule.shippingCost}, freeShippingAt=${selectedRule.freeShippingAt}`);
+      
+      // Check if free shipping applies
+      const isFreeShipping = selectedRule.freeShippingAt > 0 && subtotal >= selectedRule.freeShippingAt;
+      const shippingCost = isFreeShipping ? 0 : selectedRule.shippingCost;
 
-    if (anyGlobalRule) {
-      console.log(`Found global rule without amount match: ${anyGlobalRule.name}`);
-      return applyShippingRule(anyGlobalRule, subtotal, res);
+      const result = {
+        shippingCost,
+        isFreeShipping,
+        deliveryDays: selectedRule.deliveryDays,
+        rule: {
+          name: selectedRule.name,
+          region: selectedRule.region,
+          freeShippingAt: selectedRule.freeShippingAt,
+          minOrderAmount: selectedRule.minOrderAmount,
+          maxOrderAmount: selectedRule.maxOrderAmount,
+          shippingCost: selectedRule.shippingCost
+        },
+        remainingForFreeShipping: isFreeShipping ? 0 : Math.max(0, selectedRule.freeShippingAt - subtotal)
+      };
+
+      console.log(`Shipping calculation result:`, result);
+      return res.json(result);
     }
 
-    // Fallback to default values
+    // Fallback to default values if no rules exist
     console.log(`No active rules found, using default values`);
-    const defaultResult = {
+    
+    const result = {
       shippingCost: subtotal >= 100 ? 0 : 10,
       isFreeShipping: subtotal >= 100,
       deliveryDays: 3,
@@ -142,44 +164,18 @@ export const calculateShipping = async (req, res) => {
         region: region,
         freeShippingAt: 100,
         minOrderAmount: 0,
-        maxOrderAmount: 10000
+        maxOrderAmount: 10000,
+        shippingCost: 10
       },
       remainingForFreeShipping: subtotal >= 100 ? 0 : Math.max(0, 100 - subtotal)
     };
 
-    console.log(`Default shipping calculation result:`, defaultResult);
-    return res.json(defaultResult);
-
+    console.log(`Default shipping calculation result:`, result);
+    return res.json(result);
   } catch (error) {
     console.error('Error calculating shipping:', error);
     res.status(500).json({ error: error.message });
   }
-};
-
-// Helper function to apply shipping rule
-const applyShippingRule = (rule, subtotal, res) => {
-  console.log(`Selected rule: ${rule.name}`);
-  console.log(`Rule details: region=${rule.region}, minOrder=${rule.minOrderAmount}, maxOrder=${rule.maxOrderAmount}, shippingCost=${rule.shippingCost}, freeShippingAt=${rule.freeShippingAt}`);
-  
-  const isFreeShipping = subtotal >= rule.freeShippingAt;
-  const shippingCost = isFreeShipping ? 0 : rule.shippingCost;
-
-  const result = {
-    shippingCost,
-    isFreeShipping,
-    deliveryDays: rule.deliveryDays,
-    rule: {
-      name: rule.name,
-      region: rule.region,
-      freeShippingAt: rule.freeShippingAt,
-      minOrderAmount: rule.minOrderAmount,
-      maxOrderAmount: rule.maxOrderAmount
-    },
-    remainingForFreeShipping: isFreeShipping ? 0 : Math.max(0, rule.freeShippingAt - subtotal)
-  };
-
-  console.log(`Shipping calculation result:`, result);
-  return res.json(result);
 };
 
 // Get active shipping rules (public endpoint)

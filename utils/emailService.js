@@ -70,7 +70,7 @@ export const sendFormSubmissionEmail = async (formData) => {
     `;
 
     const mailOptions = {
-      from: process.env.EMAIL_FROM || "marketing@athlekt.com",
+      from: process.env.EMAIL_FROM || "orders@athlekt.com",
       to: formData.email,
       subject: subject,
       html: htmlContent
@@ -121,7 +121,7 @@ export const sendOTPEmail = async (email, otp, type = "verification") => {
     `;
 
     const mailOptions = {
-      from: process.env.EMAIL_FROM || "marketing@athlekt.com",
+      from: process.env.EMAIL_FROM || "orders@athlekt.com",
       to: email,
       subject: subject,
       html: htmlContent
@@ -287,7 +287,7 @@ export const sendOrderConfirmationEmail = async (order) => {
     `;
 
     const mailOptions = {
-      from: process.env.EMAIL_FROM || "marketing@athlekt.com",
+      from: process.env.EMAIL_FROM || "orders@athlekt.com",
       to: order.customer.email,
       bcc: process.env.TO_EMAIL_SUBMISSIONS, // BCC to admin for order notifications
       subject: subject,

@@ -101,7 +101,7 @@ const sendOrderConfirmationEmail = async (order) => {
     const transporter = createTransporter();
     
     const mailOptions = {
-      from: "orders@athlekt.com",
+      from: "marketing@athlekt.com",
       to: order.customer.email,
       subject: `Order Confirmation - ${order.orderNumber}`,
       html: `
@@ -179,7 +179,7 @@ const sendOrderStatusUpdateEmail = async (order, oldStatus, newStatus) => {
     const statusMessage = statusMessages[newStatus] || `Your order status has been updated to: ${newStatus}`;
     
     const mailOptions = {
-      from: "orders@athlekt.com",
+      from: "marketing@athlekt.com",
       to: order.customer.email,
       subject: `Order Status Update - ${order.orderNumber}`,
       html: `

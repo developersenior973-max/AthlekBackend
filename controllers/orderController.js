@@ -322,6 +322,16 @@ export const createOrder = async (req, res) => {
 
           orderItems.push(orderItem);
         } else {
+          // Find the specific variant from the product to get the correct SKU
+          const variant = product.variants.find(v => v.size === item.size && v.color.name === item.color);
+
+          // Use the SKU from the database variant. If not found, use null.
+          const variantSku = variant ? variant.sku : null;
+
+          if (!variantSku) {
+            console.warn(`⚠️ SKU not found for product "${product.title}" with size "${item.size}" and color "${item.color}". Order will proceed without SKU.`);
+          }
+
           const itemTotal = product.basePrice * item.quantity;
           subtotal += itemTotal;
 
@@ -331,7 +341,7 @@ export const createOrder = async (req, res) => {
             variant: {
               size: item.size,
               color: item.color,
-              sku: item.sku,
+              sku: variantSku || 'N/A', // Save the real SKU or 'N/A' if not found
             },
             quantity: item.quantity,
             price: product.basePrice,

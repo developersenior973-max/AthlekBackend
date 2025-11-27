@@ -279,48 +279,12 @@ export const createOrder = async (req, res) => {
         
         const product = await Product.findById(actualProductId);
         if (!product) {
-          // If product not found, use the data from frontend but create a valid ObjectId
-          const itemTotal = item.price * item.quantity;
-          subtotal += itemTotal;
-
-          // Create a new ObjectId for the productId if it's not a valid ObjectId
-          let productId;
-          try {
-            productId = new mongoose.Types.ObjectId(item.productId);
-          } catch (error) {
-            // If the productId is not a valid ObjectId, create a new one
-            productId = new mongoose.Types.ObjectId();
-          }
-
-          const orderItem = {
-            productId: productId,
-            productName: item.productName,
-            variant: {
-              size: item.size,
-              color: item.color,
-              sku: item.sku,
-            },
-            quantity: item.quantity,
-            price: item.price,
-            totalPrice: itemTotal,
-          };
-
-          // Add bundle details if it's a bundle
-          if (item.isBundle) {
-            orderItem.isBundle = true;
-            if (item.bundleId) {
-              try {
-                orderItem.bundleId = new mongoose.Types.ObjectId(item.bundleId);
-              } catch (error) {
-                console.error(`Error converting bundleId ${item.bundleId}:`, error);
-              }
-            }
-            if (item.bundleDetails) {
-              orderItem.bundleDetails = item.bundleDetails;
-            }
-          }
-
-          orderItems.push(orderItem);
+          // If product is not found in the database, stop the order creation.
+          console.error(`❌ Product with ID "${actualProductId}" not found in database for item "${item.productName}".`);
+          return res.status(400).json({
+            success: false,
+            message: `Product "${item.productName}" is not available. Please remove it from your cart.`
+          });
         } else {
           // Find the specific variant from the product to get the correct SKU
           const variant = product.variants.find(v => v.size === item.size && v.color.name === item.color);
@@ -330,6 +294,18 @@ export const createOrder = async (req, res) => {
 
           if (!variantSku) {
             console.warn(`⚠️ SKU not found for product "${product.title}" with size "${item.size}" and color "${item.color}". Order will proceed without SKU.`);
+          }
+
+          // Reduce stock for the purchased variant
+          if (variant) {
+            const newStock = variant.stock - item.quantity;
+            if (newStock < 0) {
+              return res.status(400).json({
+                success: false,
+                message: `Not enough stock for ${product.title} (${variant.size}/${variant.color.name}). Only ${variant.stock} left.`
+              });
+            }
+            variant.stock = newStock;
           }
 
           const itemTotal = product.basePrice * item.quantity;
@@ -364,51 +340,12 @@ export const createOrder = async (req, res) => {
           }
 
           orderItems.push(orderItem);
+          await product.save({ validateBeforeSave: false }); // Save the updated stock
         }
       } catch (error) {
         console.error(`Error processing item ${item.productId}:`, error);
-        // Use frontend data as fallback
-        const itemTotal = item.price * item.quantity;
-        subtotal += itemTotal;
-
-        // Create a new ObjectId for the productId if it's not a valid ObjectId
-        let productId;
-        try {
-          productId = new mongoose.Types.ObjectId(item.productId);
-        } catch (error) {
-          // If the productId is not a valid ObjectId, create a new one
-          productId = new mongoose.Types.ObjectId();
-        }
-
-        const fallbackOrderItem = {
-          productId: productId,
-          productName: item.productName,
-          variant: {
-            size: item.size,
-            color: item.color,
-            sku: item.sku,
-          },
-          quantity: item.quantity,
-          price: item.price,
-          totalPrice: itemTotal,
-        };
-
-        // Add bundle details if it's a bundle (important for fallback case)
-        if (item.isBundle) {
-          fallbackOrderItem.isBundle = true;
-          if (item.bundleId) {
-            try {
-              fallbackOrderItem.bundleId = new mongoose.Types.ObjectId(item.bundleId);
-            } catch (error) {
-              console.error(`Error converting bundleId ${item.bundleId}:`, error);
-            }
-          }
-          if (item.bundleDetails) {
-            fallbackOrderItem.bundleDetails = item.bundleDetails;
-          }
-        }
-
-        orderItems.push(fallbackOrderItem);
+        // If any error occurs, stop the order creation to prevent data inconsistency.
+        return res.status(500).json({ success: false, message: `Error processing item "${item.productName}".` });
       }
     }
 

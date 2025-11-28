@@ -105,8 +105,7 @@ const productSchema = new mongoose.Schema({
   },
   description: {
     type: String,
-    trim: true,
-    default: ""
+    trim: true
   },
   discountPercentage: {
     type: Number,
@@ -116,23 +115,19 @@ const productSchema = new mongoose.Schema({
   },
   purpose: {
     type: String,
-    trim: true,
-    default: ""
+    trim: true
   },
   features: {
     type: String,
-    trim: true,
-    default: ""
+    trim: true
   },
   materials: {
     type: String,
-    trim: true,
-    default: ""
+    trim: true
   },
   care: {
     type: String,
-    trim: true,
-    default: ""
+    trim: true
   },
   reviewRating: {
     type: Number,
@@ -162,10 +157,6 @@ const productSchema = new mongoose.Schema({
     type: Boolean,
     default: true
   },
-  isProductHighlight: {
-    type: Boolean,
-    default: false
-  },
   sizeOptions: [{
     type: String,
     trim: true
@@ -176,33 +167,7 @@ const productSchema = new mongoose.Schema({
     type: String
   }
 }, {
-  timestamps: true,
-  toJSON: { 
-    virtuals: true,
-    getters: true,
-    transform: function(doc, ret) {
-      // Ensure all fields are included even if undefined
-      ret.description = ret.description || "";
-      ret.purpose = ret.purpose || "";
-      ret.features = ret.features || "";
-      ret.materials = ret.materials || "";
-      ret.care = ret.care || "";
-      return ret;
-    }
-  },
-  toObject: { 
-    virtuals: true,
-    getters: true,
-    transform: function(doc, ret) {
-      // Ensure all fields are included even if undefined
-      ret.description = ret.description || "";
-      ret.purpose = ret.purpose || "";
-      ret.features = ret.features || "";
-      ret.materials = ret.materials || "";
-      ret.care = ret.care || "";
-      return ret;
-    }
-  }
+  timestamps: true
 });
 
 // Index for better search performance

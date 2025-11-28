@@ -65,7 +65,10 @@ const normalizeImageArray = (value) => {
 export const getBundles = async (req, res) => {
   try {
     const bundles = await Bundle.find().populate("products");
-    const baseUrl = `${req.protocol}://${req.get('host')}`;
+    // Force HTTPS to prevent mixed content warnings, especially when behind a proxy.
+    const protocol = req.headers['x-forwarded-proto'] === 'https' ? 'https' : 'http';
+    const host = req.get('host');
+    const baseUrl = `${protocol}://${host}`;
     const bundlesWithFullUrls = bundles.map(bundle => enhanceBundleWithImages(bundle, baseUrl));
     res.json({ data: bundlesWithFullUrls });
   } catch (error) {
@@ -80,7 +83,10 @@ export const getBundleById = async (req, res) => {
     if (!bundle) {
       return res.status(404).json({ error: "Bundle not found" });
     }
-    const baseUrl = `${req.protocol}://${req.get('host')}`;
+    // Force HTTPS to prevent mixed content warnings
+    const protocol = req.headers['x-forwarded-proto'] === 'https' ? 'https' : 'http';
+    const host = req.get('host');
+    const baseUrl = `${protocol}://${host}`;
     res.json({ data: enhanceBundleWithImages(bundle, baseUrl) });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -175,7 +181,10 @@ export const createBundle = async (req, res) => {
     await bundle.save();
 
     const populatedBundle = await Bundle.findById(bundle._id).populate("products");
-    const baseUrl = `${req.protocol}://${req.get('host')}`;
+    // Force HTTPS to prevent mixed content warnings
+    const protocol = req.headers['x-forwarded-proto'] === 'https' ? 'https' : 'http';
+    const host = req.get('host');
+    const baseUrl = `${protocol}://${host}`;
     res.status(201).json({ data: enhanceBundleWithImages(populatedBundle, baseUrl) });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -287,7 +296,10 @@ export const updateBundle = async (req, res) => {
       return res.status(404).json({ error: "Bundle not found" });
     }
 
-    const baseUrl = `${req.protocol}://${req.get('host')}`;
+    // Force HTTPS to prevent mixed content warnings
+    const protocol = req.headers['x-forwarded-proto'] === 'https' ? 'https' : 'http';
+    const host = req.get('host');
+    const baseUrl = `${protocol}://${host}`;
     res.json({ data: enhanceBundleWithImages(bundle, baseUrl) });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -337,8 +349,10 @@ export const getActiveBundles = async (req, res) => {
     console.log('📦 Found bundles:', bundles.length);
     bundles.forEach(bundle => {
       console.log(`Bundle: ${bundle.name}, Start: ${bundle.startDate}, End: ${bundle.endDate}, Category: ${bundle.category}`);
-    });
-    const baseUrl = `${req.protocol}://${req.get('host')}`;
+    });    // Force HTTPS to prevent mixed content warnings
+    const protocol = req.headers['x-forwarded-proto'] === 'https' ? 'https' : 'http';
+    const host = req.get('host');
+    const baseUrl = `${protocol}://${host}`;
     const bundlesWithFullUrls = bundles.map(bundle => enhanceBundleWithImages(bundle, baseUrl));
     res.json({ data: bundlesWithFullUrls });
   } catch (error) {
@@ -365,7 +379,10 @@ export const getActiveBundlesByCategory = async (req, res) => {
       isActive: true,
       ...categoryFilter
     }).populate("products");
-    const baseUrl = `${req.protocol}://${req.get('host')}`;
+    // Force HTTPS to prevent mixed content warnings
+    const protocol = req.headers['x-forwarded-proto'] === 'https' ? 'https' : 'http';
+    const host = req.get('host');
+    const baseUrl = `${protocol}://${host}`;
     const bundlesWithFullUrls = bundles.map(bundle => enhanceBundleWithImages(bundle, baseUrl));
     res.json({ data: bundlesWithFullUrls });
   } catch (error) {
@@ -390,7 +407,10 @@ export const getPublicBundleDetail = async (req, res) => {
       return res.status(404).json({ error: "Bundle not found" });
     }
 
-    const baseUrl = `${req.protocol}://${req.get('host')}`;
+    // Force HTTPS to prevent mixed content warnings
+    const protocol = req.headers['x-forwarded-proto'] === 'https' ? 'https' : 'http';
+    const host = req.get('host');
+    const baseUrl = `${protocol}://${host}`;
     res.json({ data: enhanceBundleWithImages(bundle, baseUrl) });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -425,7 +445,10 @@ export const calculateBundleDiscount = async (req, res) => {
         }
       ]
     }).populate("products");
-    const baseUrl = `${req.protocol}://${req.get('host')}`;
+    // Force HTTPS to prevent mixed content warnings
+    const protocol = req.headers['x-forwarded-proto'] === 'https' ? 'https' : 'http';
+    const host = req.get('host');
+    const baseUrl = `${protocol}://${host}`;
     const bundlesWithFullUrls = bundles.map(bundle => enhanceBundleWithImages(bundle, baseUrl));
 
     let bestDiscount = null;

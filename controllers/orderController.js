@@ -336,6 +336,12 @@ export const createOrder = async (req, res) => {
           const variation = bundle.variations.find(v => v.sku === item.sku);
           if (variation) {
             const newStock = variation.stock - item.quantity;
+            if (newStock < 0) {
+              return res.status(400).json({
+                success: false,
+                message: `Not enough stock for ${bundle.name} (SKU: ${item.sku}). Only ${variation.stock} left.`
+              });
+            }
             variation.stock = newStock;
             await bundle.save({ validateBeforeSave: false });
           } else {

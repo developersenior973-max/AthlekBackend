@@ -78,15 +78,6 @@ export const getProducts = async (req, res) => {
       productObj.sizeGuideImage = product.sizeGuideImage ? `${baseUrl}${product.sizeGuideImage}` : "";
       productObj.reviewRating = Number(averageRating.toFixed(1));
       productObj.reviewCount = reviewCount;
-      
-      // Explicitly include text fields to ensure they're not undefined
-      productObj.description = product.description || "";
-      productObj.purpose = product.purpose || "";
-      productObj.features = product.features || "";
-      productObj.materials = product.materials || "";
-      productObj.care = product.care || "";
-      productObj.isProductHighlight = product.isProductHighlight || false;
-      
       return productObj;
     });
     
@@ -253,29 +244,11 @@ export const getProduct = async (req, res) => {
     // Get the base URL for images
     const baseUrl = `${req.protocol}://${req.get('host')}`;
     
-    // Transform product to include full image URLs and ensure all fields are included
+    // Transform product to include full image URLs
     const productObj = product.toObject();
     productObj.images = product.images ? product.images.map(img => `${baseUrl}${img}`) : [];
     productObj.highlightImage = product.highlightImage ? `${baseUrl}${product.highlightImage}` : undefined;
     productObj.sizeGuideImage = product.sizeGuideImage ? `${baseUrl}${product.sizeGuideImage}` : "";
-    
-    // Explicitly include text fields to ensure they're not undefined
-    productObj.description = product.description || "";
-    productObj.purpose = product.purpose || "";
-    productObj.features = product.features || "";
-    productObj.materials = product.materials || "";
-    productObj.care = product.care || "";
-    productObj.reviewRating = product.reviewRating || 0;
-    productObj.reviewCount = product.reviewCount || 0;
-    productObj.isProductHighlight = product.isProductHighlight || false;
-    
-    console.log('📤 Sending product data to frontend:', {
-      description: productObj.description,
-      purpose: productObj.purpose,
-      features: productObj.features,
-      materials: productObj.materials,
-      care: productObj.care
-    });
     
     res.status(200).json({
       success: true,
@@ -488,16 +461,6 @@ export const createProduct = async (req, res) => {
     productObj.images = product.images ? product.images.map(img => `${baseUrl}${img}`) : [];
     productObj.highlightImage = product.highlightImage ? `${baseUrl}${product.highlightImage}` : undefined;
     productObj.sizeGuideImage = product.sizeGuideImage ? `${baseUrl}${product.sizeGuideImage}` : "";
-    
-    // Explicitly include text fields to ensure they're not undefined
-    productObj.description = product.description || "";
-    productObj.purpose = product.purpose || "";
-    productObj.features = product.features || "";
-    productObj.materials = product.materials || "";
-    productObj.care = product.care || "";
-    productObj.reviewRating = product.reviewRating || 0;
-    productObj.reviewCount = product.reviewCount || 0;
-    productObj.isProductHighlight = product.isProductHighlight || false;
 
     res.status(201).json({
       success: true,
@@ -594,21 +557,11 @@ export const updateProduct = async (req, res) => {
     // Get the base URL for images
     const baseUrl = `${req.protocol}://${req.get('host')}`;
     
-    // Transform product to include full image URLs and ensure all fields are included
+    // Transform product to include full image URLs
     const productObj = updatedProduct.toObject();
     productObj.images = updatedProduct.images ? updatedProduct.images.map(img => `${baseUrl}${img}`) : [];
     productObj.highlightImage = updatedProduct.highlightImage ? `${baseUrl}${updatedProduct.highlightImage}` : undefined;
     productObj.sizeGuideImage = updatedProduct.sizeGuideImage ? `${baseUrl}${updatedProduct.sizeGuideImage}` : "";
-    
-    // Explicitly include text fields to ensure they're not undefined
-    productObj.description = updatedProduct.description || "";
-    productObj.purpose = updatedProduct.purpose || "";
-    productObj.features = updatedProduct.features || "";
-    productObj.materials = updatedProduct.materials || "";
-    productObj.care = updatedProduct.care || "";
-    productObj.reviewRating = updatedProduct.reviewRating || 0;
-    productObj.reviewCount = updatedProduct.reviewCount || 0;
-    productObj.isProductHighlight = updatedProduct.isProductHighlight || false;
 
     res.status(200).json({
       success: true,

@@ -326,7 +326,7 @@ export const createOrder = async (req, res) => {
         // Extract actual productId from variantId if it's a composite string
         if (item.isBundle) {
           console.log(`Processing bundle item: ${item.productName}`);
-          const bundle = await Bundle.findById(item.productId).populate('products.productId');
+          const bundle = await Bundle.findById(item.bundleId).populate('products.productId');
           if (!bundle) {
             return res.status(400).json({ success: false, message: `Bundle "${item.productName}" not found.` });
           }

@@ -326,46 +326,70 @@ export const createOrder = async (req, res) => {
         // Extract actual productId from variantId if it's a composite string
         if (item.isBundle) {
           console.log(`Processing bundle item: ${item.productName}`);
-          // The item.id from the cart is the bundle's ID
-          const bundle = await Bundle.findById(item.id);
+          const bundle = await Bundle.findById(item.bundleId).populate('products.productId');
           if (!bundle) {
             return res.status(400).json({ success: false, message: `Bundle "${item.productName}" not found.` });
           }
 
-          // Find the selected variation in the bundle to reduce stock
-          const variation = bundle.variations.find(v => v.sku === item.sku);
-          if (variation) {
-            const newStock = variation.stock - item.quantity;
+          const bundleComponentSkus = [];
+          // Reduce stock for each product within the bundle
+          for (const bundleProductInfo of bundle.products) {
+            const productInBundle = bundleProductInfo.productId; // This is the populated product object
+            
+            // Find the selected component details from the request body
+            const componentDetails = item.bundleDetails.components?.find(
+              c => c.productId === productInBundle._id.toString()
+            );
+
+            if (!componentDetails || !componentDetails.selectedSize || !componentDetails.selectedColor) {
+              return res.status(400).json({ success: false, message: `Variation details missing for product ${productInBundle.title} in the bundle.` });
+            }
+
+            const selectedVariant = productInBundle.variants.find(v => 
+              v.size === componentDetails.selectedSize && 
+              v.color.name === componentDetails.selectedColor.name
+            );
+
+            if (!selectedVariant) {
+              return res.status(400).json({ success: false, message: `Variant not found for ${productInBundle.title} in size ${componentDetails.selectedSize} and color ${componentDetails.selectedColor.name}.` });
+            }
+
+            const newStock = selectedVariant.stock - item.quantity;
             if (newStock < 0) {
               return res.status(400).json({
                 success: false,
-                message: `Not enough stock for ${bundle.name} (SKU: ${item.sku}). Only ${variation.stock} left.`
+                message: `Not enough stock for ${productInBundle.title} (${selectedVariant.size}/${selectedVariant.color.name}). Only ${selectedVariant.stock} left.`
               });
             }
-            variation.stock = newStock;
-            await bundle.save({ validateBeforeSave: false });
-          } else {
-            console.warn(`Could not find variation with SKU ${item.sku} in bundle ${bundle.name} to reduce stock.`);
+            selectedVariant.stock = newStock;
+            await productInBundle.save({ validateBeforeSave: false });
+
+            // Collect the SKU for the component product
+            bundleComponentSkus.push({
+              productName: productInBundle.title,
+              sku: selectedVariant.sku || 'N/A'
+            });
           }
 
           // Add bundle to order items
           const orderItem = {
             productId: bundle._id,
             productName: bundle.name,
-            quantity: item.quantity,
-            price: item.price,
-            totalPrice: item.price * item.quantity,
             isBundle: true,
             bundleId: bundle._id,
-            // Use the bundleDetails directly from the checkout payload
-            bundleDetails: item.bundleDetails,
+            bundleDetails: {
+              ...item.bundleDetails,
+              componentSkus: bundleComponentSkus // Add the SKUs of component products
+            },
+            quantity: item.quantity,
+            price: bundle.bundlePrice,
+            totalPrice: bundle.bundlePrice * item.quantity,
             variant: {
-              // The SKU is now correctly sourced from the item itself
-              sku: item.sku || 'N/A'
+              sku: bundle.sku || 'N/A'
             }
           };
           orderItems.push(orderItem);
-          subtotal += orderItem.totalPrice; // Use the item's total price
+          subtotal += orderItem.totalPrice;
 
           continue; // Skip to the next item in the cart
         }

@@ -98,7 +98,6 @@ export const createBundle = async (req, res) => {
     const parsedSizeOptions = parseJsonField(bundleData.sizeOptions);
     const parsedGuarantees = parseJsonField(bundleData.guarantees);
     const parsedLengthOptions = parseJsonField(bundleData.lengthOptions);
-    const parsedVariations = parseJsonField(bundleData.variations);
 
     bundleData.colorOptions = Array.isArray(parsedColorOptions) ? parsedColorOptions : [];
     bundleData.packOptions = Array.isArray(parsedPackOptions) ? parsedPackOptions : [];
@@ -106,7 +105,6 @@ export const createBundle = async (req, res) => {
     bundleData.guarantees = Array.isArray(parsedGuarantees) ? parsedGuarantees : [];
     bundleData.lengthOptions = Array.isArray(parsedLengthOptions) ? parsedLengthOptions.filter(Boolean) : [];
 
-    bundleData.variations = Array.isArray(parsedVariations) ? parsedVariations : [];
     if (typeof bundleData.sizePriceVariation === "string") {
       try {
         bundleData.sizePriceVariation = JSON.parse(bundleData.sizePriceVariation);
@@ -243,11 +241,6 @@ export const updateBundle = async (req, res) => {
     const parsedLengthOptions = parseJsonField(updateData.lengthOptions);
     if (parsedLengthOptions) {
       updateData.lengthOptions = parsedLengthOptions;
-    }
-
-    const parsedVariations = parseJsonField(updateData.variations);
-    if (parsedVariations) {
-      updateData.variations = parsedVariations;
     }
 
     if (typeof updateData.sizePriceVariation === "string") {

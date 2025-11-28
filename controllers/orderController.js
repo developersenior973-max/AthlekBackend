@@ -327,7 +327,6 @@ export const createOrder = async (req, res) => {
         if (item.isBundle) {
           console.log(`Processing bundle item: ${item.productName}`);
           const bundle = await Bundle.findById(item.bundleId).populate('products.productId');
-          const bundle = await Bundle.findById(item.productId).populate('products.productId');
           if (!bundle) {
             return res.status(400).json({ success: false, message: `Bundle "${item.productName}" not found.` });
           }

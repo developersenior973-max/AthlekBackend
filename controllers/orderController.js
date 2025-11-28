@@ -297,6 +297,60 @@ export const createOrder = async (req, res) => {
     for (const item of items) {
       try {
         // Extract actual productId from variantId if it's a composite string
+        if (item.isBundle) {
+          console.log(`Processing bundle item: ${item.productName}`);
+          const bundle = await Bundle.findById(item.bundleId).populate('products.productId');
+          if (!bundle) {
+            return res.status(400).json({ success: false, message: `Bundle "${item.productName}" not found.` });
+          }
+
+          // Reduce stock for each product within the bundle
+          for (const bundleProductInfo of bundle.products) {
+            const productInBundle = bundleProductInfo.productId;
+            const selectedVariant = productInBundle.variants.find(v => 
+              v.size === item.bundleDetails.selectedSize && 
+              v.color.name === item.bundleDetails.selectedColor.name
+            );
+
+            if (!selectedVariant) {
+              return res.status(400).json({
+                success: false,
+                message: `Variant not found for ${productInBundle.title} in size ${item.bundleDetails.selectedSize} and color ${item.bundleDetails.selectedColor.name}.`
+              });
+            }
+
+            const newStock = selectedVariant.stock - item.quantity;
+            if (newStock < 0) {
+              return res.status(400).json({
+                success: false,
+                message: `Not enough stock for ${productInBundle.title} (${selectedVariant.size}/${selectedVariant.color.name}). Only ${selectedVariant.stock} left.`
+              });
+            }
+            selectedVariant.stock = newStock;
+            await productInBundle.save({ validateBeforeSave: false });
+          }
+
+          // Add bundle to order items
+          const orderItem = {
+            productId: bundle._id,
+            productName: bundle.name,
+            isBundle: true,
+            bundleId: bundle._id,
+            bundleDetails: item.bundleDetails,
+            quantity: item.quantity,
+            price: bundle.bundlePrice,
+            totalPrice: bundle.bundlePrice * item.quantity,
+            variant: {
+              sku: bundle.sku || 'N/A'
+            }
+          };
+          orderItems.push(orderItem);
+          subtotal += orderItem.totalPrice;
+
+          continue; // Skip to the next item in the cart
+        }
+
+        // --- Existing logic for regular products ---
         let actualProductId = item.productId;
         if (item.productId && item.productId.includes('-')) {
           // If productId is in format "productId-size-color", extract just the productId part
@@ -366,7 +420,7 @@ export const createOrder = async (req, res) => {
           }
 
           orderItems.push(orderItem);
-          await product.save({ validateBeforeSave: false }); // Save the updated stock
+          await product.save({ validateBeforeSave: false }); // Save the updated stock for regular product
         }
       } catch (error) {
         console.error(`Error processing item ${item.productId}:`, error);

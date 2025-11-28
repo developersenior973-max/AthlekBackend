@@ -353,7 +353,7 @@ export const createOrder = async (req, res) => {
           // Add bundle details if it's a bundle
           if (item.isBundle) {
             orderItem.isBundle = true;
-            if (item.bundleId && typeof item.bundleId === 'string') {
+            if (item.bundleId) {
               try {
                 orderItem.bundleId = new mongoose.Types.ObjectId(item.bundleId);
               } catch (error) {

@@ -207,21 +207,32 @@ const sendOrderStatusUpdateEmail = async (order, oldStatus, newStatus) => {
           
           <div style="margin: 20px 0;">
             <h3>Items in Your Order:</h3>
-            ${order.items.map(item => `
-              <div style="border-bottom: 1px solid #eee; padding: 10px 0;">
-                <p><strong>${item.productName}</strong></p>
-                ${item.isBundle && item.bundleDetails ? `
-                  ${item.bundleDetails.selectedPack ? `<p>Pack: ${item.bundleDetails.selectedPack.name} (${item.bundleDetails.selectedPack.quantity} pieces)</p>` : ''}
-                  ${item.bundleDetails.selectedColor?.name ? `<p>Color: ${item.bundleDetails.selectedColor.name}</p>` : ''}
-                  ${item.bundleDetails.selectedSize ? `<p>Size: ${item.bundleDetails.selectedSize}</p>` : ''}
-                  ${item.bundleDetails.selectedLength ? `<p>Length: ${item.bundleDetails.selectedLength}</p>` : ''}
-                ` : ''}
-                ${item.variant?.size ? `<p>Size: ${item.variant.size}</p>` : ''}
-                ${item.variant?.color ? `<p>Color: ${item.variant.color}</p>` : ''}
-                <p>Quantity: ${item.quantity}</p>                
-                <p>Price: AED${item.price.toFixed(2)}</p>
-              </div>
-            `).join('')}
+            <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+              <thead>
+                <tr style="background-color: #f8f9fa;">
+                  <th style="border: 1px solid #ddd; padding: 12px; text-align: left; color: #333;">Item</th>
+                  <th style="border: 1px solid #ddd; padding: 12px; text-align: left; color: #333;">SKU</th>
+                  <th style="border: 1px solid #ddd; padding: 12px; text-align: center; color: #333;">Qty</th>
+                  <th style="border: 1px solid #ddd; padding: 12px; text-align: right; color: #333;">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${order.items.map(item => `
+                  <tr>
+                    <td style="border: 1px solid #ddd; padding: 12px; color: #666;">
+                      <strong>${item.productName}</strong>
+                      <br>
+                      <small style="color: #888;">
+                        ${item.variant?.size || ''} / ${item.variant?.color?.name || ''}
+                      </small>
+                    </td>
+                    <td style="border: 1px solid #ddd; padding: 12px; text-align: left; color: #666;">${item.variant?.sku || 'N/A'}</td>
+                    <td style="border: 1px solid #ddd; padding: 12px; text-align: center; color: #666;">${item.quantity}</td>
+                    <td style="border: 1px solid #ddd; padding: 12px; text-align: right; color: #666; font-weight: bold;">AED ${item.totalPrice.toFixed(2)}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
           </div>
           
           <div style="background: #f0f0f0; padding: 15px; border-radius: 5px;">

@@ -327,6 +327,8 @@ export const createOrder = async (req, res) => {
         if (item.isBundle) {
           console.log(`Processing bundle item: ${item.productName}`);
           const bundle = await Bundle.findById(item.bundleId).populate('products.productId');
+          // The item.id from the cart is the bundle's ID
+          const bundle = await Bundle.findById(item.id);
           if (!bundle) {
             return res.status(400).json({ success: false, message: `Bundle "${item.productName}" not found.` });
           }
@@ -355,10 +357,15 @@ export const createOrder = async (req, res) => {
             }
 
             const newStock = selectedVariant.stock - item.quantity;
+          // Find the selected variation in the bundle to reduce stock
+          const variation = bundle.variations.find(v => v.sku === item.sku);
+          if (variation) {
+            const newStock = variation.stock - item.quantity;
             if (newStock < 0) {
               return res.status(400).json({
                 success: false,
                 message: `Not enough stock for ${productInBundle.title} (${selectedVariant.size}/${selectedVariant.color.name}). Only ${selectedVariant.stock} left.`
+                message: `Not enough stock for ${bundle.name} (SKU: ${item.sku}). Only ${variation.stock} left.`
               });
             }
             selectedVariant.stock = newStock;
@@ -369,12 +376,19 @@ export const createOrder = async (req, res) => {
               productName: productInBundle.title,
               sku: selectedVariant.sku || 'N/A'
             });
+            variation.stock = newStock;
+            await bundle.save({ validateBeforeSave: false });
+          } else {
+            console.warn(`Could not find variation with SKU ${item.sku} in bundle ${bundle.name} to reduce stock.`);
           }
 
           // Add bundle to order items
           const orderItem = {
             productId: bundle._id,
             productName: bundle.name,
+            quantity: item.quantity,
+            price: item.price,
+            totalPrice: item.price * item.quantity,
             isBundle: true,
             bundleId: bundle._id,
             bundleDetails: {
@@ -384,12 +398,17 @@ export const createOrder = async (req, res) => {
             quantity: item.quantity,
             price: bundle.bundlePrice,
             totalPrice: bundle.bundlePrice * item.quantity,
+            // Use the bundleDetails directly from the checkout payload
+            bundleDetails: item.bundleDetails,
             variant: {
               sku: bundle.sku || 'N/A'
+              // The SKU is now correctly sourced from the item itself
+              sku: item.sku || 'N/A'
             }
           };
           orderItems.push(orderItem);
           subtotal += orderItem.totalPrice;
+          subtotal += orderItem.totalPrice; // Use the item's total price
 
           continue; // Skip to the next item in the cart
         }

@@ -231,6 +231,15 @@ export const getProduct = async (req, res) => {
         message: 'Product not found'
       });
     }
+
+    console.log('📦 Fetching product:', id);
+    console.log('📝 Product data from DB:', {
+      description: product.description,
+      purpose: product.purpose,
+      features: product.features,
+      materials: product.materials,
+      care: product.care
+    });
     
     // Get the base URL for images
     const baseUrl = `${req.protocol}://${req.get('host')}`;
@@ -483,6 +492,15 @@ export const updateProduct = async (req, res) => {
   try {
     const { id } = req.params;
     const updateData = req.body;
+    
+    console.log('🔄 Updating product:', id);
+    console.log('📝 Update data received:', {
+      description: updateData.description,
+      purpose: updateData.purpose,
+      features: updateData.features,
+      materials: updateData.materials,
+      care: updateData.care
+    });
 
     if (updateData && Object.prototype.hasOwnProperty.call(updateData, 'sizeGuideImage')) {
       if (updateData.sizeGuideImage === null) {
@@ -527,6 +545,14 @@ export const updateProduct = async (req, res) => {
       updateData,
       { new: true, runValidators: true }
     );
+
+    console.log('✅ Product updated in DB:', {
+      description: updatedProduct.description,
+      purpose: updatedProduct.purpose,
+      features: updatedProduct.features,
+      materials: updatedProduct.materials,
+      care: updatedProduct.care
+    });
 
     // Get the base URL for images
     const baseUrl = `${req.protocol}://${req.get('host')}`;

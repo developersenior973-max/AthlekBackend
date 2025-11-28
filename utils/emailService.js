@@ -224,7 +224,7 @@ export const sendOrderConfirmationEmail = async (order) => {
                     <td style="border: 1px solid #ddd; padding: 12px; color: #666;"><strong>${item.productName}</strong></td>
                     <td style="border: 1px solid #ddd; padding: 12px; text-align: left; color: #666;">${item.variant?.sku || 'N/A'}</td>
                     <td style="border: 1px solid #ddd; padding: 12px; text-align: center; color: #666;">${item.variant?.size || 'Standard'}</td>
-                    <td style="border: 1px solid #ddd; padding: 12px; text-align: center; color: #666;">${item.variant?.color?.name || 'Default'}</td>
+                    <td style="border: 1px solid #ddd; padding: 12px; text-align: center; color: #666;">${item.variant?.color || 'Default'}</td>
                     <td style="border: 1px solid #ddd; padding: 12px; text-align: center; color: #666;">${item.quantity}</td>
                     <td style="border: 1px solid #ddd; padding: 12px; text-align: right; color: #666;">AED ${item.price.toFixed(2)}</td>
                     <td style="border: 1px solid #ddd; padding: 12px; text-align: right; color: #666; font-weight: bold;">AED ${item.totalPrice.toFixed(2)}</td>

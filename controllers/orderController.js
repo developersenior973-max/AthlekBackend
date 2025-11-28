@@ -207,6 +207,21 @@ const sendOrderStatusUpdateEmail = async (order, oldStatus, newStatus) => {
           
           <div style="margin: 20px 0;">
             <h3>Items in Your Order:</h3>
+            ${order.items.map(item => `
+              <div style="border-bottom: 1px solid #eee; padding: 10px 0;">
+                <p><strong>${item.productName}</strong></p>
+                ${item.isBundle && item.bundleDetails ? `
+                  ${item.bundleDetails.selectedPack ? `<p>Pack: ${item.bundleDetails.selectedPack.name} (${item.bundleDetails.selectedPack.quantity} pieces)</p>` : ''}
+                  ${item.bundleDetails.selectedColor?.name ? `<p>Color: ${item.bundleDetails.selectedColor.name}</p>` : ''}
+                  ${item.bundleDetails.selectedSize ? `<p>Size: ${item.bundleDetails.selectedSize}</p>` : ''}
+                  ${item.bundleDetails.selectedLength ? `<p>Length: ${item.bundleDetails.selectedLength}</p>` : ''}
+                ` : ''}
+                ${item.variant?.size ? `<p>Size: ${item.variant.size}</p>` : ''}
+                ${item.variant?.color ? `<p>Color: ${item.variant.color}</p>` : ''}
+                <p>Quantity: ${item.quantity}</p>                
+                <p>Price: AED${item.price.toFixed(2)}</p>
+              </div>
+            `).join('')}
             <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
               <thead>
                 <tr style="background-color: #f8f9fa;">

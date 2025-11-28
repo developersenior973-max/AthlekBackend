@@ -326,7 +326,12 @@ export const createOrder = async (req, res) => {
         // Extract actual productId from variantId if it's a composite string
         if (item.isBundle) {
           console.log(`Processing bundle item: ${item.productName}`);
+<<<<<<< HEAD
           const bundle = await Bundle.findById(item.bundleId).populate('products.productId');
+=======
+          // The item.id from the cart is the bundle's ID
+          const bundle = await Bundle.findById(item.id);
+>>>>>>> parent of f5c6888 (cds)
           if (!bundle) {
             return res.status(400).json({ success: false, message: `Bundle "${item.productName}" not found.` });
           }
@@ -377,6 +382,7 @@ export const createOrder = async (req, res) => {
             productName: bundle.name,
             isBundle: true,
             bundleId: bundle._id,
+<<<<<<< HEAD
             bundleDetails: {
               ...item.bundleDetails,
               componentSkus: bundleComponentSkus // Add the SKUs of component products
@@ -384,6 +390,10 @@ export const createOrder = async (req, res) => {
             quantity: item.quantity,
             price: bundle.bundlePrice,
             totalPrice: bundle.bundlePrice * item.quantity,
+=======
+            // Use the bundleDetails directly from the checkout payload
+            bundleDetails: item.bundleDetails,
+>>>>>>> parent of f5c6888 (cds)
             variant: {
               sku: bundle.sku || 'N/A'
             }

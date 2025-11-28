@@ -380,7 +380,7 @@ export const createOrder = async (req, res) => {
           });
         } else {
           // Find the specific variant from the product to get the correct SKU
-          const variant = product.variants.find(v => v.size === item.size && item.color && v.color.name === item.color);
+          const variant = product.variants.find(v => v.size === item.size && v.color.name === item.color);
 
           // Use the SKU from the database variant. If not found, use null.
           const variantSku = variant ? variant.sku : null;

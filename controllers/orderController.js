@@ -304,7 +304,6 @@ export const createOrder = async (req, res) => {
             return res.status(400).json({ success: false, message: `Bundle "${item.productName}" not found.` });
           }
 
-          const bundleComponentSkus = [];
           // Reduce stock for each product within the bundle
           for (const bundleProductInfo of bundle.products) {
             const productInBundle = bundleProductInfo.productId;
@@ -329,12 +328,6 @@ export const createOrder = async (req, res) => {
             }
             selectedVariant.stock = newStock;
             await productInBundle.save({ validateBeforeSave: false });
-
-            // Collect the SKU for the component product
-            bundleComponentSkus.push({
-              productName: productInBundle.title,
-              sku: selectedVariant.sku || 'N/A'
-            });
           }
 
           // Add bundle to order items
@@ -343,10 +336,7 @@ export const createOrder = async (req, res) => {
             productName: bundle.name,
             isBundle: true,
             bundleId: bundle._id,
-            bundleDetails: {
-              ...item.bundleDetails,
-              componentSkus: bundleComponentSkus // Add the SKUs of component products
-            },
+            bundleDetails: item.bundleDetails,
             quantity: item.quantity,
             price: bundle.bundlePrice,
             totalPrice: bundle.bundlePrice * item.quantity,

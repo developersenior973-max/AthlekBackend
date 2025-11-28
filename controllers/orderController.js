@@ -133,6 +133,14 @@ const sendOrderConfirmationEmail = async (order) => {
                   ${item.bundleDetails.selectedColor?.name ? `<p>Color: ${item.bundleDetails.selectedColor.name}</p>` : ''}
                   ${item.bundleDetails.selectedSize ? `<p>Size: ${item.bundleDetails.selectedSize}</p>` : ''}
                   ${item.bundleDetails.selectedLength ? `<p>Length: ${item.bundleDetails.selectedLength}</p>` : ''}
+                  ${item.bundleDetails.componentSkus && item.bundleDetails.componentSkus.length > 0 ? `
+                    <p style="margin-top: 5px; margin-bottom: 5px;"><strong>Bundle Components:</strong></p>
+                    <ul style="list-style-type: none; padding-left: 0; margin-top: 0;">
+                      ${item.bundleDetails.componentSkus.map(comp => `
+                        <li style="margin-left: 15px; text-indent: -15px;">&bull; ${comp.productName}: SKU - ${comp.sku}</li>
+                      `).join('')}
+                    </ul>
+                  ` : ''}
                 ` : ''}
                 ${item.variant?.size ? `<p>Size: ${item.variant.size}</p>` : ''}
                 ${item.variant?.color ? `<p>Color: ${item.variant.color}</p>` : ''}
@@ -215,6 +223,14 @@ const sendOrderStatusUpdateEmail = async (order, oldStatus, newStatus) => {
                   ${item.bundleDetails.selectedColor?.name ? `<p>Color: ${item.bundleDetails.selectedColor.name}</p>` : ''}
                   ${item.bundleDetails.selectedSize ? `<p>Size: ${item.bundleDetails.selectedSize}</p>` : ''}
                   ${item.bundleDetails.selectedLength ? `<p>Length: ${item.bundleDetails.selectedLength}</p>` : ''}
+                  ${item.bundleDetails.componentSkus && item.bundleDetails.componentSkus.length > 0 ? `
+                    <p style="margin-top: 5px; margin-bottom: 5px;"><strong>Bundle Components:</strong></p>
+                    <ul style="list-style-type: none; padding-left: 0; margin-top: 0;">
+                      ${item.bundleDetails.componentSkus.map(comp => `
+                        <li style="margin-left: 15px; text-indent: -15px;">&bull; ${comp.productName}: ${comp.sku}</li>
+                      `).join('')}
+                    </ul>
+                  ` : ''}
                 ` : ''}
                 ${item.variant?.size ? `<p>Size: ${item.variant.size}</p>` : ''}
                 ${item.variant?.color ? `<p>Color: ${item.variant.color}</p>` : ''}
@@ -240,6 +256,17 @@ const sendOrderStatusUpdateEmail = async (order, oldStatus, newStatus) => {
                       <small style="color: #888;">
                         ${item.variant?.size || ''} / ${item.variant?.color?.name || ''}
                       </small>
+                      ${item.isBundle && item.bundleDetails.componentSkus && item.bundleDetails.componentSkus.length > 0 ? `
+                        <br>
+                        <small style="color: #888;">
+                          <strong>Components:</strong>
+                          <ul style="list-style-type: none; padding-left: 10px; margin-top: 5px; margin-bottom: 0;">
+                            ${item.bundleDetails.componentSkus.map(comp => `
+                              <li style="margin-left: 15px; text-indent: -15px;">&bull; ${comp.productName}: ${comp.sku}</li>
+                            `).join('')}
+                          </ul>
+                        </small>
+                      ` : ''}
                     </td>
                     <td style="border: 1px solid #ddd; padding: 12px; text-align: left; color: #666;">${item.variant?.sku || 'N/A'}</td>
                     <td style="border: 1px solid #ddd; padding: 12px; text-align: center; color: #666;">${item.quantity}</td>

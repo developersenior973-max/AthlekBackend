@@ -327,7 +327,7 @@ export const createOrder = async (req, res) => {
         if (item.isBundle) {
           console.log(`Processing bundle item: ${item.productName}`);
           // The item.id from the cart is the bundle's ID
-          const bundle = await Bundle.findById(item.id);
+          const bundle = await Bundle.findById(item.productId);
           if (!bundle) {
             return res.status(400).json({ success: false, message: `Bundle "${item.productName}" not found.` });
           }
@@ -356,7 +356,6 @@ export const createOrder = async (req, res) => {
             price: item.price,
             totalPrice: item.price * item.quantity,
             isBundle: true,
-            bundleId: bundle._id,
             // Use the bundleDetails directly from the checkout payload
             bundleDetails: item.bundleDetails,
             variant: {

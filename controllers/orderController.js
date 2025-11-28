@@ -327,7 +327,7 @@ export const createOrder = async (req, res) => {
         if (item.isBundle) {
           console.log(`Processing bundle item: ${item.productName}`);
           // The item.id from the cart is the bundle's ID
-          const bundle = await Bundle.findById(item.productId);
+          const bundle = await Bundle.findById(item.id);
           if (!bundle) {
             return res.status(400).json({ success: false, message: `Bundle "${item.productName}" not found.` });
           }
@@ -392,12 +392,6 @@ export const createOrder = async (req, res) => {
           // Reduce stock for the purchased variant
           if (variant) {
             const newStock = variant.stock - item.quantity;
-            if (newStock < 0) {
-              return res.status(400).json({
-                success: false,
-                message: `Not enough stock for ${product.title} (${variant.size}/${variant.color.name}). Only ${variant.stock} left.`
-              });
-            }
             variant.stock = newStock;
           }
 
@@ -437,7 +431,7 @@ export const createOrder = async (req, res) => {
         }
       } catch (error) {
         console.error(`Error processing item ${item.productId}:`, error);
-        // If any error occurs, stop the order creation to prevent data inconsistency.
+        // If any error occurs, stop the order creation to prevent data inconsistency
         return res.status(500).json({ success: false, message: `Error processing item "${item.productName}".` });
       }
     }

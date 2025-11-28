@@ -334,24 +334,17 @@ export const createOrder = async (req, res) => {
           const bundleComponentSkus = [];
           // Reduce stock for each product within the bundle
           for (const bundleProductInfo of bundle.products) {
-            const productInBundle = bundleProductInfo.productId; // This is the populated product object
-            
-            // Find the selected component details from the request body
-            const componentDetails = item.bundleDetails.components?.find(
-              c => c.productId === productInBundle._id.toString()
-            );
-
-            if (!componentDetails || !componentDetails.selectedSize || !componentDetails.selectedColor) {
-              return res.status(400).json({ success: false, message: `Variation details missing for product ${productInBundle.title} in the bundle.` });
-            }
-
+            const productInBundle = bundleProductInfo.productId;
             const selectedVariant = productInBundle.variants.find(v => 
-              v.size === componentDetails.selectedSize && 
-              v.color.name === componentDetails.selectedColor.name
+              v.size === item.bundleDetails.selectedSize && 
+              v.color.name === item.bundleDetails.selectedColor.name
             );
 
             if (!selectedVariant) {
-              return res.status(400).json({ success: false, message: `Variant not found for ${productInBundle.title} in size ${componentDetails.selectedSize} and color ${componentDetails.selectedColor.name}.` });
+              return res.status(400).json({
+                success: false,
+                message: `Variant not found for ${productInBundle.title} in size ${item.bundleDetails.selectedSize} and color ${item.bundleDetails.selectedColor.name}.`
+              });
             }
 
             const newStock = selectedVariant.stock - item.quantity;

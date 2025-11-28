@@ -103,16 +103,6 @@ const bundleSchema = new mongoose.Schema({
       icon: { type: String },
     },
   ],
-  variations: [
-    {
-      pack: { type: String, required: true },
-      color: { type: String, required: true },
-      size: { type: String, required: true },
-      sku: { type: String, required: true },
-      price: { type: Number, required: true },
-      stock: { type: Number, default: 0 },
-    }
-  ],
   products: [
     {
       type: mongoose.Schema.Types.ObjectId,

@@ -1,5 +1,6 @@
 import Order from '../models/Order.js';
 import Product from '../models/Product.js';
+import Bundle from '../models/Bundle.js';
 import ngeniusService from '../services/ngeniusService.js';
 import { sendOrderConfirmationEmail } from '../utils/emailService.js';
 
@@ -250,6 +251,61 @@ export const handlePaymentSuccess = async (req, res) => {
             
             for (const item of order.items) {
               try {
+                // Handle bundle stock deduction
+                if (item.isBundle && item.bundleId) {
+                  console.log(`📦 Processing bundle item: ${item.productName}`);
+                  
+                  const bundle = await Bundle.findById(item.bundleId);
+                  if (!bundle) {
+                    console.warn(`⚠️ Bundle not found for item ${item.productName} (Bundle ID: ${item.bundleId})`);
+                    continue;
+                  }
+
+                  // Get bundle details from order item
+                  const bundleDetails = item.bundleDetails;
+                  if (!bundleDetails) {
+                    console.warn(`⚠️ Bundle details not found for item ${item.productName}`);
+                    continue;
+                  }
+
+                  // Find matching variation by pack, color, and size
+                  const packName = bundleDetails.selectedPack?.name || "";
+                  const colorName = bundleDetails.selectedColor?.name || "";
+                  const size = bundleDetails.selectedSize || "";
+
+                  if (!bundle.variations || !Array.isArray(bundle.variations)) {
+                    console.warn(`⚠️ No variations found for bundle ${bundle.name}`);
+                    continue;
+                  }
+
+                  const matchingVariation = bundle.variations.find((v: any) => 
+                    v.pack === packName && 
+                    v.color === colorName && 
+                    v.size === size
+                  );
+
+                  if (!matchingVariation) {
+                    console.warn(`⚠️ Variation not found for bundle ${bundle.name} - Pack: ${packName}, Color: ${colorName}, Size: ${size}`);
+                    continue;
+                  }
+
+                  // Check if sufficient stock is available
+                  if (matchingVariation.stock < item.quantity) {
+                    console.warn(`⚠️ Insufficient bundle stock. Available: ${matchingVariation.stock}, Required: ${item.quantity}`);
+                    // Still deduct what's available, but log a warning
+                    matchingVariation.stock = 0;
+                  } else {
+                    // Deduct stock from bundle variation
+                    matchingVariation.stock -= item.quantity;
+                    console.log(`✅ Bundle stock deducted: ${bundle.name} (${packName}, ${colorName}, ${size}) - ${item.quantity} units. Remaining: ${matchingVariation.stock}`);
+                  }
+
+                  // Save the bundle with updated stock
+                  await bundle.save();
+                  continue; // Skip product stock deduction for bundles
+                }
+
+                // Handle regular product stock deduction (existing code)
                 // Skip if productId is not valid
                 if (!item.productId) {
                   console.warn(`⚠️ Skipping item ${item.productName} - no productId`);
@@ -434,6 +490,61 @@ export const getPaymentStatus = async (req, res) => {
             
             for (const item of order.items) {
               try {
+                // Handle bundle stock deduction
+                if (item.isBundle && item.bundleId) {
+                  console.log(`📦 Processing bundle item: ${item.productName}`);
+                  
+                  const bundle = await Bundle.findById(item.bundleId);
+                  if (!bundle) {
+                    console.warn(`⚠️ Bundle not found for item ${item.productName} (Bundle ID: ${item.bundleId})`);
+                    continue;
+                  }
+
+                  // Get bundle details from order item
+                  const bundleDetails = item.bundleDetails;
+                  if (!bundleDetails) {
+                    console.warn(`⚠️ Bundle details not found for item ${item.productName}`);
+                    continue;
+                  }
+
+                  // Find matching variation by pack, color, and size
+                  const packName = bundleDetails.selectedPack?.name || "";
+                  const colorName = bundleDetails.selectedColor?.name || "";
+                  const size = bundleDetails.selectedSize || "";
+
+                  if (!bundle.variations || !Array.isArray(bundle.variations)) {
+                    console.warn(`⚠️ No variations found for bundle ${bundle.name}`);
+                    continue;
+                  }
+
+                  const matchingVariation = bundle.variations.find((v: any) => 
+                    v.pack === packName && 
+                    v.color === colorName && 
+                    v.size === size
+                  );
+
+                  if (!matchingVariation) {
+                    console.warn(`⚠️ Variation not found for bundle ${bundle.name} - Pack: ${packName}, Color: ${colorName}, Size: ${size}`);
+                    continue;
+                  }
+
+                  // Check if sufficient stock is available
+                  if (matchingVariation.stock < item.quantity) {
+                    console.warn(`⚠️ Insufficient bundle stock. Available: ${matchingVariation.stock}, Required: ${item.quantity}`);
+                    // Still deduct what's available, but log a warning
+                    matchingVariation.stock = 0;
+                  } else {
+                    // Deduct stock from bundle variation
+                    matchingVariation.stock -= item.quantity;
+                    console.log(`✅ Bundle stock deducted: ${bundle.name} (${packName}, ${colorName}, ${size}) - ${item.quantity} units. Remaining: ${matchingVariation.stock}`);
+                  }
+
+                  // Save the bundle with updated stock
+                  await bundle.save();
+                  continue; // Skip product stock deduction for bundles
+                }
+
+                // Handle regular product stock deduction (existing code)
                 // Skip if productId is not valid
                 if (!item.productId) {
                   console.warn(`⚠️ Skipping item ${item.productName} - no productId`);

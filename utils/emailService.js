@@ -219,9 +219,18 @@ export const sendOrderConfirmationEmail = async (order) => {
                 </tr>
               </thead>
               <tbody>
-                ${order.items.map(item => `
+                ${order.items.map(item => {
+                  // Get pack name for bundle items
+                  const packName = item.isBundle && item.bundleDetails?.selectedPack?.name 
+                    ? item.bundleDetails.selectedPack.name 
+                    : null;
+                  const productDisplayName = packName 
+                    ? `${item.productName} - ${packName}` 
+                    : item.productName;
+                  
+                  return `
                   <tr>
-                    <td style="border: 1px solid #ddd; padding: 12px; color: #666;"><strong>${item.productName}</strong></td>
+                    <td style="border: 1px solid #ddd; padding: 12px; color: #666;"><strong>${productDisplayName}</strong></td>
                     <td style="border: 1px solid #ddd; padding: 12px; text-align: left; color: #666;">${item.variant?.sku || 'N/A'}</td>
                     <td style="border: 1px solid #ddd; padding: 12px; text-align: center; color: #666;">${item.variant?.size || 'Standard'}</td>
                     <td style="border: 1px solid #ddd; padding: 12px; text-align: center; color: #666;">${item.variant?.color || 'Default'}</td>
@@ -229,7 +238,8 @@ export const sendOrderConfirmationEmail = async (order) => {
                     <td style="border: 1px solid #ddd; padding: 12px; text-align: right; color: #666;">AED ${item.price.toFixed(2)}</td>
                     <td style="border: 1px solid #ddd; padding: 12px; text-align: right; color: #666; font-weight: bold;">AED ${item.totalPrice.toFixed(2)}</td>
                   </tr>
-                `).join('')}
+                `;
+                }).join('')}
               </tbody>
             </table>
           </div>

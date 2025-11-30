@@ -311,6 +311,34 @@ export const createOrder = async (req, res) => {
             if (item.bundleId) {
               try {
                 orderItem.bundleId = new mongoose.Types.ObjectId(item.bundleId);
+                
+                // For bundles, get SKU from bundle variations instead of frontend SKU
+                try {
+                  const bundle = await Bundle.findById(item.bundleId);
+                  if (bundle && bundle.variations && bundle.variations.length > 0 && item.bundleDetails) {
+                    const packName = item.bundleDetails.selectedPack?.name || item.bundleDetails.selectedPack;
+                    const colorName = item.bundleDetails.selectedColor?.name || item.bundleDetails.selectedColor || item.color;
+                    const size = item.bundleDetails.selectedSize || item.size;
+                    
+                    // Find matching bundle variation
+                    const bundleVariation = bundle.variations.find((v) => 
+                      v.pack === packName && 
+                      v.color === colorName && 
+                      v.size === size
+                    );
+                    
+                    if (bundleVariation && bundleVariation.sku) {
+                      // Use bundle variation SKU
+                      orderItem.variant.sku = bundleVariation.sku;
+                      console.log(`✅ Using bundle SKU: ${bundleVariation.sku} for bundle ${bundle.name} (${packName}, ${colorName}, ${size})`);
+                    } else {
+                      console.warn(`⚠️ Bundle variation not found for bundle "${bundle.name}" with pack "${packName}", color "${colorName}", size "${size}". Using frontend SKU.`);
+                    }
+                  }
+                } catch (bundleError) {
+                  console.error(`Error fetching bundle for SKU:`, bundleError);
+                  // Continue with frontend SKU as fallback
+                }
               } catch (error) {
                 console.error(`Error converting bundleId ${item.bundleId}:`, error);
               }
@@ -354,6 +382,34 @@ export const createOrder = async (req, res) => {
             if (item.bundleId) {
               try {
                 orderItem.bundleId = new mongoose.Types.ObjectId(item.bundleId);
+                
+                // For bundles, get SKU from bundle variations instead of product variant
+                try {
+                  const bundle = await Bundle.findById(item.bundleId);
+                  if (bundle && bundle.variations && bundle.variations.length > 0 && item.bundleDetails) {
+                    const packName = item.bundleDetails.selectedPack?.name || item.bundleDetails.selectedPack;
+                    const colorName = item.bundleDetails.selectedColor?.name || item.bundleDetails.selectedColor || item.color;
+                    const size = item.bundleDetails.selectedSize || item.size;
+                    
+                    // Find matching bundle variation
+                    const bundleVariation = bundle.variations.find((v) => 
+                      v.pack === packName && 
+                      v.color === colorName && 
+                      v.size === size
+                    );
+                    
+                    if (bundleVariation && bundleVariation.sku) {
+                      // Use bundle variation SKU
+                      orderItem.variant.sku = bundleVariation.sku;
+                      console.log(`✅ Using bundle SKU: ${bundleVariation.sku} for bundle ${bundle.name} (${packName}, ${colorName}, ${size})`);
+                    } else {
+                      console.warn(`⚠️ Bundle variation not found for bundle "${bundle.name}" with pack "${packName}", color "${colorName}", size "${size}". Using product variant SKU.`);
+                    }
+                  }
+                } catch (bundleError) {
+                  console.error(`Error fetching bundle for SKU:`, bundleError);
+                  // Continue with product variant SKU as fallback
+                }
               } catch (error) {
                 console.error(`Error converting bundleId ${item.bundleId}:`, error);
               }
@@ -399,6 +455,34 @@ export const createOrder = async (req, res) => {
           if (item.bundleId) {
             try {
               fallbackOrderItem.bundleId = new mongoose.Types.ObjectId(item.bundleId);
+              
+              // For bundles, get SKU from bundle variations instead of frontend SKU
+              try {
+                const bundle = await Bundle.findById(item.bundleId);
+                if (bundle && bundle.variations && bundle.variations.length > 0 && item.bundleDetails) {
+                  const packName = item.bundleDetails.selectedPack?.name || item.bundleDetails.selectedPack;
+                  const colorName = item.bundleDetails.selectedColor?.name || item.bundleDetails.selectedColor || item.color;
+                  const size = item.bundleDetails.selectedSize || item.size;
+                  
+                  // Find matching bundle variation
+                  const bundleVariation = bundle.variations.find((v) => 
+                    v.pack === packName && 
+                    v.color === colorName && 
+                    v.size === size
+                  );
+                  
+                  if (bundleVariation && bundleVariation.sku) {
+                    // Use bundle variation SKU
+                    fallbackOrderItem.variant.sku = bundleVariation.sku;
+                    console.log(`✅ Using bundle SKU: ${bundleVariation.sku} for bundle ${bundle.name} (${packName}, ${colorName}, ${size})`);
+                  } else {
+                    console.warn(`⚠️ Bundle variation not found for bundle "${bundle.name}" with pack "${packName}", color "${colorName}", size "${size}". Using frontend SKU.`);
+                  }
+                }
+              } catch (bundleError) {
+                console.error(`Error fetching bundle for SKU:`, bundleError);
+                // Continue with frontend SKU as fallback
+              }
             } catch (error) {
               console.error(`Error converting bundleId ${item.bundleId}:`, error);
             }
@@ -603,6 +687,61 @@ export const updateOrderStatus = async (req, res) => {
       
       for (const item of order.items) {
         try {
+          // Handle bundle stock deduction
+          if (item.isBundle && item.bundleId) {
+            console.log(`📦 Processing bundle item: ${item.productName}`);
+            
+            const bundle = await Bundle.findById(item.bundleId);
+            if (!bundle) {
+              console.warn(`⚠️ Bundle not found for item ${item.productName} (Bundle ID: ${item.bundleId})`);
+              continue;
+            }
+
+            // Get bundle details from order item
+            const bundleDetails = item.bundleDetails;
+            if (!bundleDetails) {
+              console.warn(`⚠️ Bundle details not found for item ${item.productName}`);
+              continue;
+            }
+
+            // Find matching variation by pack, color, and size
+            const packName = bundleDetails.selectedPack?.name || "";
+            const colorName = bundleDetails.selectedColor?.name || "";
+            const size = bundleDetails.selectedSize || "";
+
+            if (!bundle.variations || !Array.isArray(bundle.variations)) {
+              console.warn(`⚠️ No variations found for bundle ${bundle.name}`);
+              continue;
+            }
+
+            const matchingVariation = bundle.variations.find((v: any) => 
+              v.pack === packName && 
+              v.color === colorName && 
+              v.size === size
+            );
+
+            if (!matchingVariation) {
+              console.warn(`⚠️ Variation not found for bundle ${bundle.name} - Pack: ${packName}, Color: ${colorName}, Size: ${size}`);
+              continue;
+            }
+
+            // Check if sufficient stock is available
+            if (matchingVariation.stock < item.quantity) {
+              console.warn(`⚠️ Insufficient bundle stock. Available: ${matchingVariation.stock}, Required: ${item.quantity}`);
+              // Still deduct what's available, but log a warning
+              matchingVariation.stock = 0;
+            } else {
+              // Deduct stock from bundle variation
+              matchingVariation.stock -= item.quantity;
+              console.log(`✅ Bundle stock deducted: ${bundle.name} (${packName}, ${colorName}, ${size}) - ${item.quantity} units. Remaining: ${matchingVariation.stock}`);
+            }
+
+            // Save the bundle with updated stock
+            await bundle.save();
+            continue; // Skip product stock deduction for bundles
+          }
+
+          // Handle regular product stock deduction (existing code)
           // Skip if productId is not valid
           if (!item.productId) {
             console.warn(`⚠️ Skipping item ${item.productName} - no productId`);
@@ -656,6 +795,54 @@ export const updateOrderStatus = async (req, res) => {
       
       for (const item of order.items) {
         try {
+          // Handle bundle stock restoration
+          if (item.isBundle && item.bundleId) {
+            console.log(`📦 Restoring bundle stock for: ${item.productName}`);
+            
+            const bundle = await Bundle.findById(item.bundleId);
+            if (!bundle) {
+              console.warn(`⚠️ Bundle not found for item ${item.productName} (Bundle ID: ${item.bundleId})`);
+              continue;
+            }
+
+            // Get bundle details from order item
+            const bundleDetails = item.bundleDetails;
+            if (!bundleDetails) {
+              console.warn(`⚠️ Bundle details not found for item ${item.productName}`);
+              continue;
+            }
+
+            // Find matching variation by pack, color, and size
+            const packName = bundleDetails.selectedPack?.name || "";
+            const colorName = bundleDetails.selectedColor?.name || "";
+            const size = bundleDetails.selectedSize || "";
+
+            if (!bundle.variations || !Array.isArray(bundle.variations)) {
+              console.warn(`⚠️ No variations found for bundle ${bundle.name}`);
+              continue;
+            }
+
+            const matchingVariation = bundle.variations.find((v: any) => 
+              v.pack === packName && 
+              v.color === colorName && 
+              v.size === size
+            );
+
+            if (!matchingVariation) {
+              console.warn(`⚠️ Variation not found for bundle ${bundle.name} - Pack: ${packName}, Color: ${colorName}, Size: ${size}`);
+              continue;
+            }
+
+            // Restore stock to bundle variation
+            matchingVariation.stock += item.quantity;
+            console.log(`✅ Bundle stock restored: ${bundle.name} (${packName}, ${colorName}, ${size}) - ${item.quantity} units. New stock: ${matchingVariation.stock}`);
+
+            // Save the bundle with updated stock
+            await bundle.save();
+            continue; // Skip product stock restoration for bundles
+          }
+
+          // Handle regular product stock restoration (existing code)
           // Skip if productId is not valid
           if (!item.productId) {
             console.warn(`⚠️ Skipping item ${item.productName} - no productId`);

@@ -474,6 +474,33 @@ export const createOrder = async (req, res) => {
 
     await order.save();
 
+    // After successfully creating the order, update the stock for each item
+    try {
+      for (const item of order.items) {
+        const product = await Product.findById(item.productId);
+        if (product) {
+          const variant = product.variants.find(
+            (v) => v.sku === item.variant.sku
+          );
+
+          if (variant) {
+            // Decrease stock
+            variant.stock -= item.quantity;
+            // Ensure stock doesn't go below zero
+            if (variant.stock < 0) {
+              variant.stock = 0;
+            }
+          }
+          await product.save();
+        }
+      }
+      console.log(`📦 Stock updated for order ${order.orderNumber}`);
+    } catch (stockError) {
+      console.error(`⚠️ Error updating stock for order ${order.orderNumber}:`, stockError);
+      // Note: The order is already created. You might want to add logic here to handle this case,
+      // for example, by flagging the order for manual review.
+    }
+
     // Don't send confirmation email yet - wait for payment success
     console.log("✅ Order created successfully, waiting for payment confirmation");
 

@@ -1,4 +1,5 @@
 import Order from '../models/Order.js';
+import Product from '../models/Product.js';
 import ngeniusService from '../services/ngeniusService.js';
 import { sendOrderConfirmationEmail } from '../utils/emailService.js';
 
@@ -88,6 +89,9 @@ export const handleNGeniusWebhook = async (req, res) => {
       return res.status(404).json({ success: false, message: "Order not found" });
     }
 
+    // Store old status before updating
+    const oldStatus = order.status;
+
     // Update order status based on payment result
     if (state === 'CAPTURED') {
       order.paymentStatus = 'paid';
@@ -108,6 +112,59 @@ export const handleNGeniusWebhook = async (req, res) => {
     };
 
     await order.save();
+
+    // Handle stock deduction when status changes to "processing"
+    if (oldStatus !== 'processing' && order.status === 'processing') {
+      console.log(`🔄 Processing order ${order.orderNumber} from payment webhook - deducting stock...`);
+      
+      for (const item of order.items) {
+        try {
+          // Skip if productId is not valid
+          if (!item.productId) {
+            console.warn(`⚠️ Skipping item ${item.productName} - no productId`);
+            continue;
+          }
+
+          // Find the product
+          const product = await Product.findById(item.productId);
+          
+          if (!product) {
+            console.warn(`⚠️ Product not found for item ${item.productName} (ID: ${item.productId})`);
+            continue;
+          }
+
+          // Find the matching variant by size and color
+          const variant = product.variants.find(v => 
+            v.size === item.variant.size && 
+            v.color.name === item.variant.color
+          );
+
+          if (!variant) {
+            console.warn(`⚠️ Variant not found for product ${product.title} - Size: ${item.variant.size}, Color: ${item.variant.color}`);
+            continue;
+          }
+
+          // Check if sufficient stock is available
+          if (variant.stock < item.quantity) {
+            console.warn(`⚠️ Insufficient stock for variant ${variant.sku}. Available: ${variant.stock}, Required: ${item.quantity}`);
+            // Still deduct what's available, but log a warning
+            variant.stock = 0;
+          } else {
+            // Deduct stock
+            variant.stock -= item.quantity;
+            console.log(`✅ Stock deducted: ${variant.sku} - ${item.quantity} units. Remaining: ${variant.stock}`);
+          }
+
+          // Save the product with updated stock
+          await product.save();
+        } catch (itemError) {
+          console.error(`❌ Error processing stock for item ${item.productName}:`, itemError);
+          // Continue with other items even if one fails
+        }
+      }
+      
+      console.log(`✅ Stock deduction completed for order ${order.orderNumber}`);
+    }
 
     // Send confirmation email if payment successful
     if (state === 'CAPTURED') {
@@ -178,11 +235,67 @@ export const handlePaymentSuccess = async (req, res) => {
         console.log('🔍 handlePaymentSuccess - Is payment successful?', isSuccessful);
         
         if (isSuccessful) {
+          // Store old status before updating
+          const oldStatus = order.status;
+          
           // Update order status
           order.paymentStatus = 'paid';
           order.paymentGatewayStatus = 'captured';
           order.status = 'processing';
           await order.save();
+
+          // Handle stock deduction when status changes to "processing"
+          if (oldStatus !== 'processing') {
+            console.log(`🔄 Processing order ${order.orderNumber} from payment success - deducting stock...`);
+            
+            for (const item of order.items) {
+              try {
+                // Skip if productId is not valid
+                if (!item.productId) {
+                  console.warn(`⚠️ Skipping item ${item.productName} - no productId`);
+                  continue;
+                }
+
+                // Find the product
+                const product = await Product.findById(item.productId);
+                
+                if (!product) {
+                  console.warn(`⚠️ Product not found for item ${item.productName} (ID: ${item.productId})`);
+                  continue;
+                }
+
+                // Find the matching variant by size and color
+                const variant = product.variants.find(v => 
+                  v.size === item.variant.size && 
+                  v.color.name === item.variant.color
+                );
+
+                if (!variant) {
+                  console.warn(`⚠️ Variant not found for product ${product.title} - Size: ${item.variant.size}, Color: ${item.variant.color}`);
+                  continue;
+                }
+
+                // Check if sufficient stock is available
+                if (variant.stock < item.quantity) {
+                  console.warn(`⚠️ Insufficient stock for variant ${variant.sku}. Available: ${variant.stock}, Required: ${item.quantity}`);
+                  // Still deduct what's available, but log a warning
+                  variant.stock = 0;
+                } else {
+                  // Deduct stock
+                  variant.stock -= item.quantity;
+                  console.log(`✅ Stock deducted: ${variant.sku} - ${item.quantity} units. Remaining: ${variant.stock}`);
+                }
+
+                // Save the product with updated stock
+                await product.save();
+              } catch (itemError) {
+                console.error(`❌ Error processing stock for item ${item.productName}:`, itemError);
+                // Continue with other items even if one fails
+              }
+            }
+            
+            console.log(`✅ Stock deduction completed for order ${order.orderNumber}`);
+          }
 
           // Send confirmation email
           try {
@@ -306,11 +419,67 @@ export const getPaymentStatus = async (req, res) => {
         console.log('🔍 Is payment successful?', isSuccessful);
         
         if (isSuccessful) {
+          // Store old status before updating
+          const oldStatus = order.status;
+          
           // Update order status
           order.paymentStatus = 'paid';
           order.paymentGatewayStatus = 'captured';
           order.status = 'processing';
           await order.save();
+
+          // Handle stock deduction when status changes to "processing"
+          if (oldStatus !== 'processing') {
+            console.log(`🔄 Processing order ${order.orderNumber} from payment status check - deducting stock...`);
+            
+            for (const item of order.items) {
+              try {
+                // Skip if productId is not valid
+                if (!item.productId) {
+                  console.warn(`⚠️ Skipping item ${item.productName} - no productId`);
+                  continue;
+                }
+
+                // Find the product
+                const product = await Product.findById(item.productId);
+                
+                if (!product) {
+                  console.warn(`⚠️ Product not found for item ${item.productName} (ID: ${item.productId})`);
+                  continue;
+                }
+
+                // Find the matching variant by size and color
+                const variant = product.variants.find(v => 
+                  v.size === item.variant.size && 
+                  v.color.name === item.variant.color
+                );
+
+                if (!variant) {
+                  console.warn(`⚠️ Variant not found for product ${product.title} - Size: ${item.variant.size}, Color: ${item.variant.color}`);
+                  continue;
+                }
+
+                // Check if sufficient stock is available
+                if (variant.stock < item.quantity) {
+                  console.warn(`⚠️ Insufficient stock for variant ${variant.sku}. Available: ${variant.stock}, Required: ${item.quantity}`);
+                  // Still deduct what's available, but log a warning
+                  variant.stock = 0;
+                } else {
+                  // Deduct stock
+                  variant.stock -= item.quantity;
+                  console.log(`✅ Stock deducted: ${variant.sku} - ${item.quantity} units. Remaining: ${variant.stock}`);
+                }
+
+                // Save the product with updated stock
+                await product.save();
+              } catch (itemError) {
+                console.error(`❌ Error processing stock for item ${item.productName}:`, itemError);
+                // Continue with other items even if one fails
+              }
+            }
+            
+            console.log(`✅ Stock deduction completed for order ${order.orderNumber}`);
+          }
 
           // Send confirmation email
           try {

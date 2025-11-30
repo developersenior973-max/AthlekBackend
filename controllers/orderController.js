@@ -596,6 +596,106 @@ export const updateOrderStatus = async (req, res) => {
     }
 
     const oldStatus = order.status;
+    
+    // Handle stock deduction when status changes to "processing"
+    if (oldStatus !== status && status === "processing") {
+      console.log(`🔄 Processing order ${order.orderNumber} - deducting stock...`);
+      
+      for (const item of order.items) {
+        try {
+          // Skip if productId is not valid
+          if (!item.productId) {
+            console.warn(`⚠️ Skipping item ${item.productName} - no productId`);
+            continue;
+          }
+
+          // Find the product
+          const product = await Product.findById(item.productId);
+          
+          if (!product) {
+            console.warn(`⚠️ Product not found for item ${item.productName} (ID: ${item.productId})`);
+            continue;
+          }
+
+          // Find the matching variant by size and color
+          const variant = product.variants.find(v => 
+            v.size === item.variant.size && 
+            v.color.name === item.variant.color
+          );
+
+          if (!variant) {
+            console.warn(`⚠️ Variant not found for product ${product.title} - Size: ${item.variant.size}, Color: ${item.variant.color}`);
+            continue;
+          }
+
+          // Check if sufficient stock is available
+          if (variant.stock < item.quantity) {
+            console.warn(`⚠️ Insufficient stock for variant ${variant.sku}. Available: ${variant.stock}, Required: ${item.quantity}`);
+            // Still deduct what's available, but log a warning
+            variant.stock = 0;
+          } else {
+            // Deduct stock
+            variant.stock -= item.quantity;
+            console.log(`✅ Stock deducted: ${variant.sku} - ${item.quantity} units. Remaining: ${variant.stock}`);
+          }
+
+          // Save the product with updated stock
+          await product.save();
+        } catch (itemError) {
+          console.error(`❌ Error processing stock for item ${item.productName}:`, itemError);
+          // Continue with other items even if one fails
+        }
+      }
+      
+      console.log(`✅ Stock deduction completed for order ${order.orderNumber}`);
+    }
+
+    // Handle stock restoration when order is cancelled (only if it was previously processing)
+    if (oldStatus !== status && status === "cancelled" && oldStatus === "processing") {
+      console.log(`🔄 Cancelling order ${order.orderNumber} - restoring stock...`);
+      
+      for (const item of order.items) {
+        try {
+          // Skip if productId is not valid
+          if (!item.productId) {
+            console.warn(`⚠️ Skipping item ${item.productName} - no productId`);
+            continue;
+          }
+
+          // Find the product
+          const product = await Product.findById(item.productId);
+          
+          if (!product) {
+            console.warn(`⚠️ Product not found for item ${item.productName} (ID: ${item.productId})`);
+            continue;
+          }
+
+          // Find the matching variant by size and color
+          const variant = product.variants.find(v => 
+            v.size === item.variant.size && 
+            v.color.name === item.variant.color
+          );
+
+          if (!variant) {
+            console.warn(`⚠️ Variant not found for product ${product.title} - Size: ${item.variant.size}, Color: ${item.variant.color}`);
+            continue;
+          }
+
+          // Restore stock
+          variant.stock += item.quantity;
+          console.log(`✅ Stock restored: ${variant.sku} - ${item.quantity} units. New stock: ${variant.stock}`);
+
+          // Save the product with updated stock
+          await product.save();
+        } catch (itemError) {
+          console.error(`❌ Error restoring stock for item ${item.productName}:`, itemError);
+          // Continue with other items even if one fails
+        }
+      }
+      
+      console.log(`✅ Stock restoration completed for order ${order.orderNumber}`);
+    }
+
     order.status = status;
     if (trackingNumber) order.trackingNumber = trackingNumber;
     if (notes) order.notes = notes;

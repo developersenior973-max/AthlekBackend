@@ -714,7 +714,7 @@ export const updateOrderStatus = async (req, res) => {
               continue;
             }
 
-            const matchingVariation = bundle.variations.find((v: any) => 
+            const matchingVariation = bundle.variations.find((v) => 
               v.pack === packName && 
               v.color === colorName && 
               v.size === size
@@ -822,7 +822,7 @@ export const updateOrderStatus = async (req, res) => {
               continue;
             }
 
-            const matchingVariation = bundle.variations.find((v: any) => 
+            const matchingVariation = bundle.variations.find((v) => 
               v.pack === packName && 
               v.color === colorName && 
               v.size === size
